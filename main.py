@@ -14,7 +14,7 @@ class Plugin:
     async def run_uninstall_fgmod(self) -> dict:
         try:
             result = subprocess.run(
-                ["/bin/bash", "/home/deck/homebrew/plugins/Decky-Framegen/assets/fgmod-remover.sh"],
+                ["/bin/bash", Path.home() / "homebrew" / "plugins" / "Decky-Framegen" / "assets" / "fgmod-remover.sh"],
                 capture_output=True,
                 text=True,
                 check=True
@@ -25,7 +25,7 @@ class Plugin:
 
     async def run_install_fgmod(self) -> dict:
         try:
-            assets_dir = Path("/home/deck/homebrew/plugins/Decky-Framegen/assets")
+            assets_dir = Path.home() / "homebrew" / "plugins" / "Decky-Framegen" / "assets"
             downloads_dir = Path.home() / "Downloads"
 
             if not assets_dir.exists():
@@ -59,7 +59,7 @@ class Plugin:
                 timeout=300
             )
 
-            fgmod_path = Path("/home/deck/fgmod")
+            fgmod_path = Path.home() / "fgmod"
             fgmod_path.mkdir(parents=True, exist_ok=True)
 
             decky.logger.info(f"Script output:\n{process.stdout}")
@@ -97,7 +97,7 @@ class Plugin:
             }
 
     async def check_fgmod_path(self) -> dict:
-        path = "/home/deck/fgmod/"
+        path = Path.home() / "fgmod"
         required_files = [
             "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3_amd_is_better.dll", "libxess.dll",
             "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini", "licenses",
@@ -119,7 +119,7 @@ class Plugin:
     # New method to list installed Steam games
     async def list_installed_games(self) -> dict:
         try:
-            steam_root = "/home/deck/.steam/steam"
+            steam_root = Path.home() / ".steam" / "steam"
             library_file = Path(steam_root) / "steamapps" / "libraryfolders.vdf"
 
             if not library_file.exists():

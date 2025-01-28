@@ -171,7 +171,7 @@ function FGModInstallerSection() {
 //     if (mainRunningApp) {
 //       try {
 //         const currentOptions = await SteamClient.Apps.GetLaunchOptionsForApp(mainRunningApp.appid);
-//         setIsPatched(currentOptions.includes('/home/deck/fgmod/fgmod %COMMAND%'));
+//         setIsPatched(currentOptions.includes('~/fgmod/fgmod %COMMAND%'));
 //       } catch (error) {
 //         console.error('Error checking launch options:', error);
 //       }
@@ -191,7 +191,7 @@ function FGModInstallerSection() {
 //           await SteamClient.Apps.SetAppLaunchOptions(mainRunningApp.appid, '');
 //           setResult(`Launch options cleared successfully. Restart the game to restore DLSS default files`);
 //         } else {
-//           await SteamClient.Apps.SetAppLaunchOptions(mainRunningApp.appid, '/home/deck/fgmod/fgmod %COMMAND%');
+//           await SteamClient.Apps.SetAppLaunchOptions(mainRunningApp.appid, '~/fgmod/fgmod %COMMAND%');
 //           setResult(`Launch options set successfully, restart the game to use FSR upscaling and frame gen via DLSS options.`);
 //         }
 //         setIsPatched(!isPatched);
@@ -257,7 +257,7 @@ function InstalledGamesSection() {
   const handlePatchClick = async (game: { appid: number; name: string }) => {
     setClickedGame(game);
     try {
-      await SteamClient.Apps.SetAppLaunchOptions(game.appid, '/home/deck/fgmod/fgmod %COMMAND%');
+      await SteamClient.Apps.SetAppLaunchOptions(game.appid, '~/fgmod/fgmod %COMMAND%');
       setResult(`Launch options set successfully for ${game.name}. You can now select DLSS in the game's menu to use FSR Upscaling and FrameGen equivalents.`);
     } catch (error) {
       if (error instanceof Error) {
@@ -271,7 +271,7 @@ function InstalledGamesSection() {
   const handleUnpatchClick = async (game: { appid: number; name: string }) => {
     setClickedGame(game);
     try {
-      await SteamClient.Apps.SetAppLaunchOptions(game.appid, '/home/deck/fgmod/fgmod-uninstaller.sh %COMMAND%');
+      await SteamClient.Apps.SetAppLaunchOptions(game.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
       setResult(`DLSS mods will uninstall on next launch of ${game.name}. The game is now unpatched.`);
     } catch (error) {
       if (error instanceof Error) {

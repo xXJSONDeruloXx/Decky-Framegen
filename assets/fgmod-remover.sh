@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# Remove /home/deck/fgmod directory if it exists
-if [[ -d "/home/deck/fgmod" ]]; then
-    rm -rf "/home/deck/fgmod"
+# Remove ~/fgmod directory if it exists
+if [[ -d "$HOME/fgmod" ]]; then
+    rm -rf "$HOME/fgmod"
 fi
 
 # Remove specific files from ~/Downloads if they exist

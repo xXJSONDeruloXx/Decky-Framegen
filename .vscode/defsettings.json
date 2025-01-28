@@ -4,7 +4,7 @@
     "deckuser"  : "deck",
     "deckpass"  : "gamer",
     "deckkey"   : "-i ${env:HOME}/.ssh/id_rsa",
-    "deckdir"   : "/home/deck",
+    "deckdir"   : "${env:HOME}",
     "pluginname": "Decky-Framegen",
     "python.analysis.extraPaths": [
         "./py_modules"
