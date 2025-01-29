@@ -3,6 +3,7 @@ import os
 import subprocess
 import json
 from pathlib import Path
+from vdf import binary_load
 
 class Plugin:
     async def _main(self):
@@ -154,6 +155,43 @@ class Plugin:
             filtered_games = [g for g in games if "Proton" not in g["name"] and "Steam Linux Runtime" not in g["name"]]
 
             return {"status": "success", "games": filtered_games}
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    async def list_installed_non_steam_games(self) -> dict:
+        try:
+            non_steam = []
+
+            steam_root = Path.home() / ".steam" / "steam"
+            users_directory = Path(steam_root)/'userdata'
+
+            for userd in os.listdir(users_directory):
+                user_dir = Path(users_directory)/userd
+                if not os.path.isdir(user_dir):
+                    continue
+
+                shortcuts_file = os.path.join(user_dir, 'config/shortcuts.vdf')
+
+                if not os.path.exists(shortcuts_file):
+                    continue
+
+                shortcuts_vdf = binary_load(open(shortcuts_file, 'rb'))
+
+                for sid, sval in shortcuts_vdf.get('shortcuts').items():
+                    game_info = {}
+                    appid = sval.get('appid')
+                    if appid < 0:
+                        appid = appid + (1 << 32)
+                    game_info['appid'] = str(appid)
+                    game_info['name'] = sval.get('AppName') or sval.get('appname')
+
+                    if game_info["appid"] and game_info["name"]:
+                        non_steam.append(game_info)
+
+            filtered_non_steam_games = [g for g in non_steam if "Proton" not in g["name"] and "Steam Linux Runtime" not in g["name"]]
+
+            return {"status": "success", "games": filtered_non_steam_games}
 
         except Exception as e:
             return {"status": "error", "message": str(e)}

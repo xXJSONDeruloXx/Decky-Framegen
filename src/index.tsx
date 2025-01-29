@@ -28,6 +28,11 @@ const listInstalledGames = callable<
   { status: string; games: { appid: string; name: string }[] }
 >("list_installed_games");
 
+const listInstalledNonSteamGames = callable<
+  [],
+  { status: string; games: { appid: string; name: string }[] }
+>("list_installed_non_steam_games")
+
 function FGModInstallerSection() {
   const [installing, setInstalling] = useState(false);
   const [uninstalling, setUninstalling] = useState(false);
@@ -232,6 +237,7 @@ function FGModInstallerSection() {
 
 function InstalledGamesSection() {
   const [games, setGames] = useState<{ appid: number; name: string }[]>([]);
+  const [nonSteamGames, setNonSteamGames] = useState<{ appid: number; name: string }[]>([]);
   const [clickedGame, setClickedGame] = useState<{ appid: number; name: string } | null>(null);
   const [result, setResult] = useState<string>('');
 
@@ -252,6 +258,25 @@ function InstalledGamesSection() {
     };
 
     fetchGames();
+  }, []);
+
+  useEffect(() => {
+    const fetchNonSteamGames = async () => {
+      const result = await listInstalledNonSteamGames();
+      if (result.status === "success") {
+        const sortedNonSteamGames = [...result.games]
+          .map(game => ({
+            ...game,
+            appid: parseInt(game.appid, 10), // Convert string to number
+          }))
+          .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+          setNonSteamGames(sortedNonSteamGames);
+      } else {
+        console.error("Failed to fetch games");
+      }
+    };
+
+    fetchNonSteamGames();
   }, []);
 
   const handlePatchClick = async (game: { appid: number; name: string }) => {
@@ -283,36 +308,69 @@ function InstalledGamesSection() {
   };
 
   return (
-    <PanelSection title="Select a game below to patch or unpatch:">
-      {games.map((game) => (
-        <PanelSectionRow key={game.appid}>
-          <div style={{ marginBottom: '16px' }}>
-            {/* Game Name as Bold Subheader */}
-            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{game.name}</div>
-            {/* Buttons Stacked Vertically */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <ButtonItem
-                layout="below"
-                onClick={() => handlePatchClick(game)}
-              >
-                Patch
-              </ButtonItem>
-              <ButtonItem
-                layout="below"
-                onClick={() => handleUnpatchClick(game)}
-              >
-                Unpatch
-              </ButtonItem>
+    <>
+      <PanelSection title="Select an installed game below to patch or unpatch:">
+        {games.map((game) => (
+          <PanelSectionRow key={game.appid}>
+            <div style={{ marginBottom: '16px' }}>
+              {/* Game Name as Bold Subheader */}
+              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{game.name}</div>
+              {/* Buttons Stacked Vertically */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <ButtonItem
+                  layout="below"
+                  onClick={() => handlePatchClick(game)}
+                >
+                  Patch
+                </ButtonItem>
+                <ButtonItem
+                  layout="below"
+                  onClick={() => handleUnpatchClick(game)}
+                >
+                  Unpatch
+                </ButtonItem>
+              </div>
             </div>
-          </div>
-          {clickedGame?.appid === game.appid && (
-            <div style={{ padding: '8px', marginTop: '8px' }}>
-              {result}
+            {clickedGame?.appid === game.appid && (
+              <div style={{ padding: '8px', marginTop: '8px' }}>
+                {result}
+              </div>
+            )}
+          </PanelSectionRow>
+        ))}
+      </PanelSection>
+
+      <PanelSection title="Select a non steam game below to patch or unpatch:">
+        {nonSteamGames.map((game) => (
+          <PanelSectionRow key={game.appid}>
+            <div style={{ marginBottom: '16px' }}>
+              {/* Game Name as Bold Subheader */}
+              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{game.name}</div>
+              {/* Buttons Stacked Vertically */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <ButtonItem
+                  layout="below"
+                  onClick={() => handlePatchClick(game)}
+                >
+                  Patch
+                </ButtonItem>
+                <ButtonItem
+                  layout="below"
+                  onClick={() => handleUnpatchClick(game)}
+                >
+                  Unpatch
+                </ButtonItem>
+              </div>
             </div>
-          )}
-        </PanelSectionRow>
-      ))}
-    </PanelSection>
+            {clickedGame?.appid === game.appid && (
+              <div style={{ padding: '8px', marginTop: '8px' }}>
+                {result}
+              </div>
+            )}
+          </PanelSectionRow>
+        ))}
+      </PanelSection>
+    </>
   );
 }
 
