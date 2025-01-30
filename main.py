@@ -14,7 +14,7 @@ class Plugin:
     async def run_uninstall_fgmod(self) -> dict:
         try:
             result = subprocess.run(
-                ["/bin/bash", Path.home() / "homebrew" / "plugins" / "Decky-Framegen" / "assets" / "fgmod-remover.sh"],
+                ["/bin/bash", Path(decky.DECKY_PLUGIN_DIR) / "assets" / "fgmod-remover.sh"],
                 capture_output=True,
                 text=True,
                 check=True
@@ -25,8 +25,8 @@ class Plugin:
 
     async def run_install_fgmod(self) -> dict:
         try:
-            assets_dir = Path.home() / "homebrew" / "plugins" / "Decky-Framegen" / "assets"
-            downloads_dir = Path.home() / "Downloads"
+            assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
+            downloads_dir = Path(decky.HOME) / "Downloads"
 
             if not assets_dir.exists():
                 decky.logger.error(f"Assets directory not found: {assets_dir}")
@@ -59,7 +59,7 @@ class Plugin:
                 timeout=300
             )
 
-            fgmod_path = Path.home() / "fgmod"
+            fgmod_path = Path(decky.HOME) / "fgmod"
             fgmod_path.mkdir(parents=True, exist_ok=True)
 
             decky.logger.info(f"Script output:\n{process.stdout}")
@@ -97,7 +97,7 @@ class Plugin:
             }
 
     async def check_fgmod_path(self) -> dict:
-        path = Path.home() / "fgmod"
+        path = Path(decky.HOME) / "fgmod"
         required_files = [
             "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3_amd_is_better.dll", "libxess.dll",
             "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini", "licenses",
@@ -108,9 +108,9 @@ class Plugin:
             "dlssg_to_fsr3_amd_is_better-3.0.dll", "fgmod-uninstaller.sh", "RestoreNvidiaSignatureChecks.reg"
         ]
 
-        if os.path.exists(path):
+        if path.exists():
             for file_name in required_files:
-                if not os.path.exists(os.path.join(path, file_name)):
+                if not path.joinpath(file_name).exists():
                     return {"exists": False}
             return {"exists": True}
         else:
@@ -119,7 +119,7 @@ class Plugin:
     # New method to list installed Steam games
     async def list_installed_games(self) -> dict:
         try:
-            steam_root = Path.home() / ".steam" / "steam"
+            steam_root = Path(decky.HOME) / ".steam" / "steam"
             library_file = Path(steam_root) / "steamapps" / "libraryfolders.vdf"
 
             if not library_file.exists():

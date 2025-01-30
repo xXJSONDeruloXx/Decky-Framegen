@@ -162,74 +162,6 @@ function FGModInstallerSection() {
   );
 }
 
-// function MainRunningApp() {
-//   const mainRunningApp = Router.MainRunningApp;
-//   const [result, setResult] = useState<string | null>(null);
-//   const [isPatched, setIsPatched] = useState<boolean>(false);
-
-//   const checkLaunchOptions = async () => {
-//     if (mainRunningApp) {
-//       try {
-//         const currentOptions = await SteamClient.Apps.GetLaunchOptionsForApp(mainRunningApp.appid);
-//         setIsPatched(currentOptions.includes('~/fgmod/fgmod %COMMAND%'));
-//       } catch (error) {
-//         console.error('Error checking launch options:', error);
-//       }
-//     }
-//   };
-
-//   useEffect(() => {
-//     if (mainRunningApp) {
-//       checkLaunchOptions();
-//     }
-//   }, [mainRunningApp]);
-
-//   const handleSetLaunchOptions = async () => {
-//     if (mainRunningApp) {
-//       try {
-//         if (isPatched) {
-//           await SteamClient.Apps.SetAppLaunchOptions(mainRunningApp.appid, '');
-//           setResult(`Launch options cleared successfully. Restart the game to restore DLSS default files`);
-//         } else {
-//           await SteamClient.Apps.SetAppLaunchOptions(mainRunningApp.appid, '~/fgmod/fgmod %COMMAND%');
-//           setResult(`Launch options set successfully, restart the game to use FSR upscaling and frame gen via DLSS options.`);
-//         }
-//         setIsPatched(!isPatched);
-//       } catch (error) {
-//         if (error instanceof Error) {
-//           setResult(`Error setting launch options: ${error.message}`);
-//         } else {
-//           setResult('Error setting launch options');
-//         }
-//       }
-//     }
-//   };
-
-//   return (
-//     <PanelSection title="Game Patcher">
-//       <PanelSectionRow>
-//         <div>
-//           {mainRunningApp ? (
-//             <>
-//               <span>{isPatched ? `UnPatch: ${mainRunningApp.display_name}` : `Patch: ${mainRunningApp.display_name}`}</span>
-//               <ButtonItem layout="below" onClick={handleSetLaunchOptions}>
-//                 {isPatched ? `UnPatch: ${mainRunningApp.display_name}` : `Patch: ${mainRunningApp.display_name}`}
-//               </ButtonItem>
-//             </>
-//           ) : (
-//             <span>No game is currently open.</span>
-//           )}
-//         </div>
-//       </PanelSectionRow>
-//       {result && (
-//         <PanelSectionRow>
-//           <div>{result}</div>
-//         </PanelSectionRow>
-//       )}
-//     </PanelSection>
-//   );
-// }
-
 function InstalledGamesSection() {
   const [games, setGames] = useState<{ appid: number; name: string }[]>([]);
   const [clickedGame, setClickedGame] = useState<{ appid: number; name: string } | null>(null);
@@ -319,7 +251,7 @@ function InstalledGamesSection() {
 export default definePlugin(() => ({
   name: "Framegen Plugin",
   titleView: <div>Decky Framegen</div>,
-  alwaysRender: true,
+  alwaysRender: false,
   content: (
     <>
       <FGModInstallerSection />
