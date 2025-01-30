@@ -8,11 +8,11 @@ This all-in-one package allows the users of any DX12 compatible GPUs (from NVIDI
 
 WHAT'S INCLUDED:
 --------------------------------------------------------------
-1) DLSS enabler DLL version 3.02.000.0
+1) DLSS enabler DLL version 3.03.000.0
 
 2) Nukem9 DLSSG to FSR3 mod version 0.110
 
-3) Optiscaler mod version 0.6.7.11
+3) Optiscaler mod version 0.7.0
 
 4) (optional) NVIDIA Runtime Environment for AMD and INTEL ARC GPUs, version 3.02.000.0 (containing DXGI proxy and FakeNVAPI in version 1.0.3.0)
 
@@ -136,6 +136,28 @@ KNOWN ISSUES/LIMITATIONS:
 
 CHANGELOG:
 --------------------------------------------------------------
+3.03.000.0:
+  - Feature: Updated DLSS Enabler to 3.03.000.0-alpha13
+  - Feature: Added autoloading of Reshade mod if its present under reshade64.dll file name in the game directory.
+  - Feature: In theory Reflex Injection should be fully compatible with OptiFG and any other FSR3.1.1 implementation (including in-game one, but wasn't tested). Known limitation, disabling FSR3 FG might break AL2/LFX due to bug in fake nvapi64.dll (work in progress).
+  - Feature: Updated Optiscaler and FakeNVAPI to experimental builds supporting Reflex/AntiLag2/LatencyFlex in Optiscaler with Frame Generation mode enabled
+  - Feature: Added new installation options: d3d12.dll and d3d11.dll
+  - Feature: Updated OptiScaler to version 0.7.0-pre90 and 0.6.8-pre5 (selectable during installation)
+  - Feature: Updated FakeNVAPI to version 1.2.0
+  - Feature: Added selectable Optiscaler version to be installed (default is 0.7, alternative is 0.6)
+  - Feature: Added support for Frame Generation with HUD detection in DirectX12 games that do not support it at all (feature provided by OptiScaler 0.7) - can be enabled in OptiMenu
+  - Feature: Changed how DLSS Enabler selects the target GPU in multi-GPU setup, from now it picks the most performant one according to Windows, instead of the one with highest amount of VRAM available
+  - Feature: Added experimental support for Frame Generation (without HUD detection) in DirectX12 and Vulkan games that implement Streamline 2.x and enable DLSS upscaling and Reflex feature - can be enabled in nvngx.ini file
+  - Feature: Added experimental support for injectable DeepDVC into the games that do not support that feature (feature available to NVIDIA RTX GPUs only)
+  - Feature: Added experimental option to inject Reflex/AL2/Latency into games that do not support it at all (for now injection works only if DLSS upscaler is active) - configurable in ini file (Reflex=inject setting)
+  - Feature: Implemented fallback to LatencyFlex for NVIDIA GPUs running under Linux (in DLSS Enabler 3.01, and 3.02 Reflex was disabled entirely under Linux, due to the bug in dxvk implementation)
+  - Feature: Implemented possibility to switch to LatencyFlex on NVIDIA GPUs - configurable in ini file (ReflexEmulation=on)
+  - Feature: Improved overall games compatibility under Windows and Linux when using various overlays like RivaTuner Statistics, SpecialK, etc...
+  - Feature: Improved troubleshooting capabilities
+  - Feature: Recompiled DLSSG-to-FSR3 files to make them much smaller than original
+  - Bugfix: Defaulting to FRS 3.1 upscaler (instead of XeSS/FSR 2.1) in The Witcher 3 when GPU doesn't support native DLSS to address issue with artifacts produced by the game on building windows in Oxenfurt
+  - Bugfix: Fixed OptiScaler menu not showing when used with DLSS Enabler
+
 3.02.000.0:
   - Feature: Reduced system latency on AMD RDNA 1+ GPUs with and without Frame Generation enabled (by using AntiLag2 provided by FakeNVAPI)
   - Feature: Reduced system latency on INTEL ARC GPUs and AMD pre RDNA1 GPUS with and without Frame Generation enabled (by using LatencyFlex provided by FakeNVAPI)

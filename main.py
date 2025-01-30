@@ -33,13 +33,12 @@ class Plugin:
             fgmod_dir.mkdir(parents=True, exist_ok=True)
 
             files_to_copy = [
-                "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3_amd_is_better.dll", "libxess.dll",
-                "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini",
-                "d3dcompiler_47.dll", "dxgi.dll", "nvapi64.dll",
-                "DisableNvidiaSignatureChecks.reg", "dxvk.conf", "_nvngx.dll",
-                "dlss-enabler.dll", "fakenvapi.ini", "nvngx.ini",
-                "dlss-enabler-upscaler.dll", "fgmod", "nvngx-wrapper.dll",
-                "dlssg_to_fsr3_amd_is_better-3.0.dll", "fgmod-uninstaller.sh", "RestoreNvidiaSignatureChecks.reg"
+                "DisableNvidiaSignatureChecks.reg", "dlss-enabler-upscaler.dll", "dlssg_to_fsr3_amd_is_better.dll",
+                "fgmod-uninstaller.sh", "nvngx.ini", "RestoreNvidiaSignatureChecks.reg", "dlss-enabler.dll",
+                "dxgi.dll", "libxess.dll", "unins000.dat", "_nvngx.dll", "dlss-enabler.log", "dxvk.conf",
+                "unins000.exe", "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3.ini", "fakenvapi.ini",
+                "nvapi64.dll", "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.log", "fakenvapi.log", "nvngx-wrapper.dll",
+                "d3dcompiler_47.dll", "dlssg_to_fsr3_amd_is_better-3.0.dll", "fgmod", "nvngx.dll"
             ]
 
             for file_name in files_to_copy:
@@ -67,14 +66,13 @@ class Plugin:
     async def check_fgmod_path(self) -> dict:
         fgmod_dir = Path.home() / "fgmod"
         required_files = [
-            "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3_amd_is_better.dll", "libxess.dll",
-            "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini",
-            "d3dcompiler_47.dll", "dxgi.dll", "nvapi64.dll",
-            "DisableNvidiaSignatureChecks.reg", "dxvk.conf", "_nvngx.dll",
-            "dlss-enabler.dll", "fakenvapi.ini", "nvngx.ini",
-            "dlss-enabler-upscaler.dll", "fgmod", "nvngx-wrapper.dll",
-            "dlssg_to_fsr3_amd_is_better-3.0.dll", "fgmod-uninstaller.sh", "RestoreNvidiaSignatureChecks.reg"
-        ]
+                "DisableNvidiaSignatureChecks.reg", "dlss-enabler-upscaler.dll", "dlssg_to_fsr3_amd_is_better.dll",
+                "fgmod-uninstaller.sh", "nvngx.ini", "RestoreNvidiaSignatureChecks.reg", "dlss-enabler.dll",
+                "dxgi.dll", "libxess.dll", "unins000.dat", "_nvngx.dll", "dlss-enabler.log", "dxvk.conf",
+                "unins000.exe", "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3.ini", "fakenvapi.ini",
+                "nvapi64.dll", "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.log", "fakenvapi.log", "nvngx-wrapper.dll",
+                "d3dcompiler_47.dll", "dlssg_to_fsr3_amd_is_better-3.0.dll", "fgmod", "nvngx.dll"
+            ]
 
         if not fgmod_dir.exists():
             return {"exists": False}
