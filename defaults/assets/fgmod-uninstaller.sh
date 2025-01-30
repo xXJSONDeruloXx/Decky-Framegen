@@ -19,7 +19,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 game_path=""
-mod_path="/usr/share/fgmod"
+mod_path="/home/deck/fgmod"
 
 # Locate the game folder based on the first argument
 if [[ "$1" == *.exe ]]; then
