@@ -69,10 +69,10 @@ class Plugin:
             return {"status": "error", "message": f"Unexpected error: {str(e)}"}
 
     async def check_fgmod_path(self) -> dict:
-        fgmod_dir = Path(decky.HOME) / "fgmod"
+        path = Path(decky.HOME) / "fgmod"
         required_files = [
             "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3_amd_is_better.dll", "libxess.dll",
-            "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini",
+            "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini", "licenses",
             "d3dcompiler_47.dll", "dxgi.dll", "nvapi64.dll",
             "DisableNvidiaSignatureChecks.reg", "dxvk.conf", "_nvngx.dll",
             "dlss-enabler.dll", "fakenvapi.ini", "nvngx.ini",
@@ -80,16 +80,19 @@ class Plugin:
             "dlssg_to_fsr3_amd_is_better-3.0.dll", "fgmod-uninstaller.sh", "RestoreNvidiaSignatureChecks.reg"
         ]
 
-        if not fgmod_dir.exists():
+        if path.exists():
+            for file_name in required_files:
+                if not path.joinpath(file_name).exists():
+                    return {"exists": False}
+            return {"exists": True}
+        else:
             return {"exists": False}
 
-        missing_files = [file for file in required_files if not (fgmod_dir / file).exists()]
-        return {"exists": not missing_files, "missing_files": missing_files}
-
+    # New method to list installed Steam games
     async def list_installed_games(self) -> dict:
         try:
             steam_root = Path(decky.HOME) / ".steam" / "steam"
-            library_file = steam_root / "steamapps" / "libraryfolders.vdf"
+            library_file = Path(steam_root) / "steamapps" / "libraryfolders.vdf"
 
             if not library_file.exists():
                 return {"status": "error", "message": "libraryfolders.vdf not found"}
