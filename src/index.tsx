@@ -3,7 +3,7 @@ import {
   PanelSection,
   PanelSectionRow,
   ButtonItem,
-  // Router
+  DropdownItem
 } from "@decky/ui";
 import { definePlugin, callable } from "@decky/api";
 import { RiAiGenerate } from "react-icons/ri";
@@ -51,7 +51,7 @@ function FGModInstallerSection() {
 
     checkPath(); // Initial check
 
-    const intervalId = setInterval(checkPath, 5000); // Check every 5 seconds
+    const intervalId = setInterval(checkPath, 3000); // Check every 3 seconds
 
     return () => clearInterval(intervalId); // Cleanup interval on component unmount
   }, []);
@@ -155,7 +155,7 @@ function FGModInstallerSection() {
       )}
       <PanelSectionRow>
         <div>
-          Once the mod is installed, patch one of the games below to replace DLSS upscale and frame gen options with FSR 3 equivalents. *games with launchers not currently supported.
+          Once installed, patch a games below to replace DLSS upscale and frame gen options with FSR 3 equivalents. * NON STEAM GAMES, GAMES WITH LAUNCHERS, AND DX11 OR BELOW NOT SUPPORTED.
         </div>
       </PanelSectionRow>
     </PanelSection>
@@ -164,86 +164,109 @@ function FGModInstallerSection() {
 
 function InstalledGamesSection() {
   const [games, setGames] = useState<{ appid: number; name: string }[]>([]);
-  const [clickedGame, setClickedGame] = useState<{ appid: number; name: string } | null>(null);
+  const [selectedGame, setSelectedGame] = useState<{ appid: number; name: string } | null>(null);
   const [result, setResult] = useState<string>('');
 
   useEffect(() => {
     const fetchGames = async () => {
-      const result = await listInstalledGames();
-      if (result.status === "success") {
-        const sortedGames = [...result.games]
-          .map(game => ({
-            ...game,
-            appid: parseInt(game.appid, 10), // Convert string to number
-          }))
-          .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-        setGames(sortedGames);
-      } else {
-        console.error("Failed to fetch games");
+      try {
+        const response = await listInstalledGames();
+        if (response.status === "success") {
+          const sortedGames = [...response.games]
+            .map(game => ({
+              ...game,
+              appid: parseInt(game.appid, 10),
+            }))
+            .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+          setGames(sortedGames);
+        }
+      } catch (error) {
+        console.error("Error fetching games:", error);
       }
     };
 
     fetchGames();
   }, []);
 
-  const handlePatchClick = async (game: { appid: number; name: string }) => {
-    setClickedGame(game);
+  const handlePatchClick = async () => {
+    if (!selectedGame) return;
+
     try {
-      await SteamClient.Apps.SetAppLaunchOptions(game.appid, '~/fgmod/fgmod %COMMAND%');
-      setResult(`Launch options set successfully for ${game.name}. You can now select DLSS in the game's menu to use FSR Upscaling and FrameGen equivalents.`);
+      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
+      setResult(`Launch options set successfully for ${selectedGame.name}. You can now select DLSS in the game's menu to use FSR Upscaling and FrameGen equivalents.`);
     } catch (error) {
-      if (error instanceof Error) {
-        setResult(`Error setting launch options: ${error.message}`);
-      } else {
-        setResult('Error setting launch options');
-      }
+      setResult(error instanceof Error ? `Error setting launch options: ${error.message}` : 'Error setting launch options');
     }
   };
 
-  const handleUnpatchClick = async (game: { appid: number; name: string }) => {
-    setClickedGame(game);
+  const handleUnpatchClick = async () => {
+    if (!selectedGame) return;
+
     try {
-      await SteamClient.Apps.SetAppLaunchOptions(game.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
-      setResult(`DLSS mods will uninstall on next launch of ${game.name}. The game is now unpatched.`);
+      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
+      setResult(`DLSS mods will uninstall on next launch of ${selectedGame.name}. The game is now unpatched.`);
     } catch (error) {
-      if (error instanceof Error) {
-        setResult(`Error clearing launch options: ${error.message}`);
-      } else {
-        setResult('Error clearing launch options');
-      }
+      setResult(error instanceof Error ? `Error clearing launch options: ${error.message}` : 'Error clearing launch options');
     }
   };
 
   return (
-    <PanelSection title="Select a game below to patch or unpatch:">
-      {games.map((game) => (
-        <PanelSectionRow key={game.appid}>
-          <div style={{ marginBottom: '16px' }}>
-            {/* Game Name as Bold Subheader */}
-            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{game.name}</div>
-            {/* Buttons Stacked Vertically */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <ButtonItem
-                layout="below"
-                onClick={() => handlePatchClick(game)}
-              >
-                Patch
-              </ButtonItem>
-              <ButtonItem
-                layout="below"
-                onClick={() => handleUnpatchClick(game)}
-              >
-                Unpatch
-              </ButtonItem>
+    <PanelSection title="Select a game to patch:">
+      <PanelSectionRow>
+        <DropdownItem
+          rgOptions={games.map(game => ({
+            data: game.appid,
+            label: game.name
+          }))}
+          selectedOption={selectedGame?.appid}
+          onChange={(option) => {
+            const game = games.find(g => g.appid === option.data);
+            setSelectedGame(game || null);
+            setResult('');
+          }}
+          strDefaultLabel="Select a game..."
+          menuLabel="Installed Games"
+        />
+      </PanelSectionRow>
+      
+      {selectedGame && (
+        <>
+          <PanelSectionRow>
+            <div style={{ fontWeight: 'bold', fontSize: '1.1em' }}>
+              {selectedGame.name}
             </div>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={handlePatchClick}
+            >
+              Patch
+            </ButtonItem>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={handleUnpatchClick}
+            >
+              Unpatch
+            </ButtonItem>
+          </PanelSectionRow>
+        </>
+      )}
+
+      {result && (
+        <PanelSectionRow>
+          <div style={{ 
+            padding: '12px',
+            marginTop: '16px',
+            backgroundColor: 'var(--decky-selected-ui-bg)',
+            borderRadius: '4px'
+          }}>
+            {result}
           </div>
-          {clickedGame?.appid === game.appid && (
-            <div style={{ padding: '8px', marginTop: '8px' }}>
-              {result}
-            </div>
-          )}
         </PanelSectionRow>
-      ))}
+      )}
     </PanelSection>
   );
 }
@@ -251,7 +274,7 @@ function InstalledGamesSection() {
 export default definePlugin(() => ({
   name: "Framegen Plugin",
   titleView: <div>Decky Framegen</div>,
-  alwaysRender: false,
+  alwaysRender: true,
   content: (
     <>
       <FGModInstallerSection />
