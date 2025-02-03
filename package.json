@@ -1,6 +1,6 @@
 {
   "name": "decky-framegen",
-  "version": "0.4.1",
+  "version": "0.7.0-trunk",
   "description": "plugin to swap DLSS with FSR, to enable upscaling and framegen in games without built in FSR.",
   "type": "module",
   "scripts": {
