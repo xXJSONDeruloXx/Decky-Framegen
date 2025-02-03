@@ -21,6 +21,7 @@ class Plugin:
             )
             return {"status": "success", "output": result.stdout}
         except subprocess.CalledProcessError as e:
+            decky.logger.error(e.output)
             return {"status": "error", "message": str(e), "output": e.output}
 
     async def run_install_fgmod(self) -> dict:
@@ -141,4 +142,9 @@ class Plugin:
             return {"status": "success", "games": filtered_games}
 
         except Exception as e:
+            decky.logger.error(str(e))
             return {"status": "error", "message": str(e)}
+
+    async def log_error(self, error: str) -> None:
+        decky.logger.error(f"FRONTEND: {error}")
+
