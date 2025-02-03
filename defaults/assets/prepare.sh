@@ -23,7 +23,7 @@ cd "$mod_path" || exit 1
 cp "$bin_path/assets.zip" .
 
 # Unzip assets.zip so that all files are in the modpath root, then remove the zip file
-unzip -o assets.zip && rm assets.zip
+unzip -j -o assets.zip && rm assets.zip
 
 # Copy fgmod.sh and fgmod-uninstaller.sh from defaults/assets
 cp "$assets_path/fgmod.sh" "$mod_path/fgmod" || exit 1

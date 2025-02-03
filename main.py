@@ -85,7 +85,7 @@ class Plugin:
         path = Path(decky.HOME) / "fgmod"
         required_files = [
             "amd_fidelityfx_dx12.dll", "dlssg_to_fsr3_amd_is_better.dll", "libxess.dll",
-            "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini", "licenses",
+            "amd_fidelityfx_vk.dll", "dlssg_to_fsr3.ini",
             "d3dcompiler_47.dll", "dxgi.dll", "nvapi64.dll",
             "DisableNvidiaSignatureChecks.reg", "dxvk.conf", "_nvngx.dll",
             "dlss-enabler.dll", "fakenvapi.ini", "nvngx.ini",
