@@ -49,32 +49,12 @@
       ]
     }
   },
-  "remote_binary_bundling" : false,
+  "remote_binary_bundling" : true,
   "remote_binary": [
     {
-      "name": "dlss-enabler-setup-3.02.000.0.exe",
-      "url": "https://github.com/artur-graniszewski/DLSS-Enabler/releases/download/3.02.000.0/dlss-enabler-setup-3.02.000.0.exe",
-      "sha256hash": "6f373a7c198ac0f7e9a6a4a5250783c265e8390059171cead5595b5a0801dc1f"
-    },
-    {
-      "name": "NVIDIA-Linux-x86_64-555.52.04.run",
-      "url": "https://download.nvidia.com/XFree86/Linux-x86_64/555.52.04/NVIDIA-Linux-x86_64-555.52.04.run",
-      "sha256hash": "9d53ae6dbef32ae95786ec7d02bb944d5050c1c70516e6065ab5356626a44402"
-    },
-    {
-      "name": "d3dcompiler_47.dll",
-      "url": "https://raw.githubusercontent.com/mozilla/fxc2/9aba9b1/dll/d3dcompiler_47.dll",
-      "sha256hash": "4432bbd1a390874f3f0a503d45cc48d346abc3a8c0213c289f4b615bf0ee84f3"
-    },
-    {
-      "name": "innoextract",
-      "url": "https://github.com/FakeMichau/innoextract/releases/download/6.3.0/innoextract",
-      "sha256hash": "c1f2b7129709e26136e2abfad4093303103e6d55e6e20a362ca5c9d454987118"
-    },
-    {
-      "name": "fakenvapi.7z",
-      "url": "https://github.com/FakeMichau/fakenvapi/releases/download/v1.2.0/fakenvapi.7z",
-      "sha256hash": "c33807e8763d7f996a59d9ca42e80fd6a170079802869a730c884779865c312b"
+      "name": "assets.zip",
+      "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/DLSS-Enabler-3.03-trunk-Extraction/assets.zip",
+      "sha256hash": "6cbddbdc0c89d79ebba3e0afc7c21fa3a4b4366b3bf5cb18f18f2bb8cbba411b"
     }
   ]
 }
