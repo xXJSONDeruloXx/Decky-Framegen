@@ -28,6 +28,8 @@ const listInstalledGames = callable<
   { status: string; games: { appid: string; name: string }[] }
 >("list_installed_games");
 
+const logError = callable<[string], void>("log_error");
+
 function FGModInstallerSection() {
   const [installing, setInstalling] = useState(false);
   const [uninstalling, setUninstalling] = useState(false);
@@ -45,14 +47,16 @@ function FGModInstallerSection() {
 
   useEffect(() => {
     const checkPath = async () => {
-      const result = await checkFGModPath();
-      setPathExists(result.exists);
+      try {
+        const result = await checkFGModPath();
+        setPathExists(result.exists);
+      } catch (e) {
+        logError('useEffect -> checkPath' + String(e));
+        console.error(e);
+      }
     };
-
     checkPath(); // Initial check
-
     const intervalId = setInterval(checkPath, 3000); // Check every 3 seconds
-
     return () => clearInterval(intervalId); // Cleanup interval on component unmount
   }, []);
 
@@ -77,82 +81,92 @@ function FGModInstallerSection() {
   }, [uninstallResult]);
 
   const handleInstallClick = async () => {
-    setInstalling(true);
-    const result = await runInstallFGMod();
-    setInstalling(false);
-    setInstallResult(result);
+    try {
+      setInstalling(true);
+      const result = await runInstallFGMod();
+      setInstalling(false);
+      setInstallResult(result);
+    } catch (e) {
+      logError('handleInstallClick: ' + String(e));
+      console.error(e)
+    }
   };
 
   const handleUninstallClick = async () => {
-    setUninstalling(true);
-    const result = await runUninstallFGMod();
-    setUninstalling(false);
-    setUninstallResult(result);
+    try {
+      setUninstalling(true);
+      const result = await runUninstallFGMod();
+      setUninstalling(false);
+      setUninstallResult(result);
+    } catch (e) {
+      logError('handleUninstallClick' + String(e));
+      console.error(e)
+    }
   };
 
   return (
     <PanelSection>
-      {pathExists !== null && (
+      {pathExists !== null ? (
         <PanelSectionRow>
           <div style={{ color: pathExists ? "green" : "red" }}>
             {pathExists ? "Mod Is Installed" : "Mod Not Installed"}
           </div>
         </PanelSectionRow>
-      )}
-      {pathExists === false && (
+      ) : null}
+      {pathExists === false ? (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleInstallClick} disabled={installing}>
             {installing ? "Installing..." : "Install FG Mod"}
           </ButtonItem>
         </PanelSectionRow>
-      )}
-      {pathExists === true && (
+      ) : null}
+      {pathExists === true ? (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleUninstallClick} disabled={uninstalling}>
             {uninstalling ? "Uninstalling..." : "Uninstall FG Mod"}
           </ButtonItem>
         </PanelSectionRow>
-      )}
-      {installResult && (
+      ) : null}
+      {installResult ? (
         <PanelSectionRow>
           <div>
             <strong>Status:</strong>{" "}
             {installResult.status === "success" ? "Success" : "Error"}
             <br />
-            {installResult.output && (
+            {installResult.output ? (
               <>
                 <strong>Output:</strong>
                 <pre style={{ whiteSpace: "pre-wrap" }}>{installResult.output}</pre>
               </>
-            )}
-            {installResult.message && (
+            ) : null}
+            {installResult.message ? (
               <>
                 <strong>Error:</strong> {installResult.message}
               </>
-            )}
+            ) : null}
           </div>
         </PanelSectionRow>
-      )}
-      {uninstallResult && (
+      ) : null}
+      {uninstallResult ? (
         <PanelSectionRow>
           <div>
             <strong>Status:</strong>{" "}
             {uninstallResult.status === "success" ? "Success" : "Error"}
             <br />
-            {uninstallResult.output && (
+            {uninstallResult.output ? (
               <>
                 <strong>Output:</strong>
                 <pre style={{ whiteSpace: "pre-wrap" }}>{uninstallResult.output}</pre>
               </>
-            )}
-            {uninstallResult.message && (
+            ) : null}
+            {uninstallResult.message ? (
               <>
                 <strong>Error:</strong> {uninstallResult.message}
               </>
-            )}
+            ) : null}
           </div>
         </PanelSectionRow>
-      )}
+      ) : null}
       <PanelSectionRow>
         <div>
           Once installed, patch a games below to replace DLSS upscale and frame gen options with FSR 3 equivalents. * NON STEAM GAMES, GAMES WITH LAUNCHERS, AND DX11 OR BELOW NOT SUPPORTED.
@@ -179,12 +193,15 @@ function InstalledGamesSection() {
             }))
             .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
           setGames(sortedGames);
+        } else {
+          logError('fetchGames: ' + JSON.stringify(response));
+          console.error('fetchGames: ' + JSON.stringify(response));
         }
       } catch (error) {
-        console.error("Error fetching games:", error);
+        logError("Error fetching games:" + String(error));
+        console.error("Error fetching games:", String(error));
       }
     };
-
     fetchGames();
   }, []);
 
@@ -195,6 +212,7 @@ function InstalledGamesSection() {
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
       setResult(`Launch options set successfully for ${selectedGame.name}. You can now select DLSS in the game's menu to use FSR Upscaling and FrameGen equivalents.`);
     } catch (error) {
+      logError('handlePatchClick: ' + String(error));
       setResult(error instanceof Error ? `Error setting launch options: ${error.message}` : 'Error setting launch options');
     }
   };
@@ -206,6 +224,7 @@ function InstalledGamesSection() {
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
       setResult(`DLSS mods will uninstall on next launch of ${selectedGame.name}. The game is now unpatched.`);
     } catch (error) {
+      logError('handleUnpatchClick: ' + String(error));
       setResult(error instanceof Error ? `Error clearing launch options: ${error.message}` : 'Error clearing launch options');
     }
   };
@@ -229,7 +248,7 @@ function InstalledGamesSection() {
         />
       </PanelSectionRow>
       
-      {selectedGame && (
+      {selectedGame ? (
         <>
           <PanelSectionRow>
             <div style={{ fontWeight: 'bold', fontSize: '1.1em' }}>
@@ -253,9 +272,9 @@ function InstalledGamesSection() {
             </ButtonItem>
           </PanelSectionRow>
         </>
-      )}
+      ) : null}
 
-      {result && (
+      {result ? (
         <PanelSectionRow>
           <div style={{ 
             padding: '12px',
@@ -266,7 +285,7 @@ function InstalledGamesSection() {
             {result}
           </div>
         </PanelSectionRow>
-      )}
+      ) : null}
     </PanelSection>
   );
 }
@@ -279,7 +298,6 @@ export default definePlugin(() => ({
     <>
       <FGModInstallerSection />
       <InstalledGamesSection />
-      <MainContent />
     </>
   ),
   icon: <RiAiGenerate />,
@@ -287,11 +305,3 @@ export default definePlugin(() => ({
     console.log("Framegen Plugin unmounted");
   },
 }));
-
-function MainContent() {
-  return (
-    <>
-      {}
-    </>
-  );
-}

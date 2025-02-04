@@ -141,4 +141,8 @@ class Plugin:
             return {"status": "success", "games": filtered_games}
 
         except Exception as e:
+            decky.logger.error(str(e))
             return {"status": "error", "message": str(e)}
+
+    async def log_error(self, error: str) -> None:
+        decky.logger.error(f"FRONTEND: {error}")
