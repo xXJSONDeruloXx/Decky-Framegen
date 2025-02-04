@@ -169,7 +169,7 @@ function FGModInstallerSection() {
       ) : null}
       <PanelSectionRow>
         <div>
-          Once installed, patch a games below to replace DLSS upscale and frame gen options with FSR 3 equivalents. * NON STEAM GAMES, GAMES WITH LAUNCHERS, AND DX11 OR BELOW NOT SUPPORTED.
+          Once installed, patch a games below to replace DLSS upscale and frame gen options with FSR 3 equivalents. * Assign a back button to 'insert' keyboard key to use Optiscaler and enable FG in non FG games.
         </div>
       </PanelSectionRow>
     </PanelSection>
