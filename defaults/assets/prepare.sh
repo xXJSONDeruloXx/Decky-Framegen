@@ -7,9 +7,6 @@ mod_path="$HOME/fgmod"
 bin_path="$(dirname "$(realpath "$0")")/../bin"
 assets_path="$(dirname "$(realpath "$0")")"
 
-nvidiaver="NVIDIA-Linux-x86_64-555.52.04.run"
-enablerver="dlss-enabler-setup-3.02.000.0.exe"
-fakenvapiver="fakenvapi.7z"
 standalone=1
 
 if [[ -d "$mod_path" ]] && [[ ! $mod_path == . ]]; then

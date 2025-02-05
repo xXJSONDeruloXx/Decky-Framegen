@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -x  # Enable debugging
+exec > >(tee -i /tmp/prepare.log) 2>&1  # Log output and errors
+
 error_exit() {
   echo "$1"
   if [[ -n $STEAM_ZENITY ]]; then
