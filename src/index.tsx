@@ -169,7 +169,7 @@ function FGModInstallerSection() {
       ) : null}
       <PanelSectionRow>
         <div>
-          Once installed, patch a games below to replace DLSS upscale and frame gen options with FSR 3 equivalents. * Assign a back button to 'insert' keyboard key to use Optiscaler and enable FG in non FG games.
+          Assign a back button to 'insert' keyboard key to use Optiscaler and enable FG in non FG games.
         </div>
       </PanelSectionRow>
     </PanelSection>
@@ -247,14 +247,22 @@ function InstalledGamesSection() {
           menuLabel="Installed Games"
         />
       </PanelSectionRow>
+
+      {result ? (
+        <PanelSectionRow>
+          <div style={{ 
+            padding: '12px',
+            marginTop: '16px',
+            backgroundColor: 'var(--decky-selected-ui-bg)',
+            borderRadius: '4px'
+          }}>
+            {result}
+          </div>
+        </PanelSectionRow>
+      ) : null}
       
       {selectedGame ? (
         <>
-          <PanelSectionRow>
-            <div style={{ fontWeight: 'bold', fontSize: '1.1em' }}>
-              {selectedGame.name}
-            </div>
-          </PanelSectionRow>
           <PanelSectionRow>
             <ButtonItem
               layout="below"
@@ -272,19 +280,6 @@ function InstalledGamesSection() {
             </ButtonItem>
           </PanelSectionRow>
         </>
-      ) : null}
-
-      {result ? (
-        <PanelSectionRow>
-          <div style={{ 
-            padding: '12px',
-            marginTop: '16px',
-            backgroundColor: 'var(--decky-selected-ui-bg)',
-            borderRadius: '4px'
-          }}>
-            {result}
-          </div>
-        </PanelSectionRow>
       ) : null}
     </PanelSection>
   );
