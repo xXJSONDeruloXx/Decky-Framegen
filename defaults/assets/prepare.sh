@@ -3,7 +3,7 @@
 set -x  # Enable debugging
 exec > >(tee -i /tmp/prepare.log) 2>&1  # Log output and errors
 
-mod_path="$HOME/fgmod"
+mod_path="$HOME/fgmod-plus"
 bin_path="$(dirname "$(realpath "$0")")/../bin"
 assets_path="$(dirname "$(realpath "$0")")"
 
@@ -27,10 +27,10 @@ cp "$bin_path"/* .
 # cp "$assets_path/fgmod-uninstaller.sh" "$mod_path" || exit 1
 
 # Update paths in scripts
-sed -i 's|mod_path="/usr/share/fgmod"|mod_path="'"$mod_path"'"|g' fgmod
+sed -i 's|mod_path="/usr/share/fgmod-plus"|mod_path="'"$mod_path"'"|g' fgmod
 chmod +x fgmod
 
-sed -i 's|mod_path="/usr/share/fgmod"|mod_path="'"$mod_path"'"|g' fgmod-uninstaller.sh
+sed -i 's|mod_path="/usr/share/fgmod-plus"|mod_path="'"$mod_path"'"|g' fgmod-uninstaller.sh
 chmod +x fgmod-uninstaller.sh
 
 echo ""

@@ -83,7 +83,7 @@ class Plugin:
             }
 
     async def check_fgmod_path(self) -> dict:
-        path = Path(decky.HOME) / "fgmod"
+        path = Path(decky.HOME) / "fgmod-plus"
         required_files = [
             "amd_fidelityfx_dx12.dll", "amd_fidelityfx_vk.dll", "d3dcompiler_47.dll", "DisableNvidiaSignatureChecks.reg",
             "dlss-enabler.dll", "dlss-enabler-upscaler.dll", "dlssg_to_fsr3_amd_is_better-3.0.dll", "dlssg_to_fsr3_amd_is_better.dll",

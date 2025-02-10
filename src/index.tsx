@@ -209,7 +209,7 @@ function InstalledGamesSection() {
     if (!selectedGame) return;
 
     try {
-      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
+      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod-plus/fgmod %COMMAND%');
       setResult(`Launch options set for ${selectedGame.name}. You can now select DLSS in the game's menu.`);
     } catch (error) {
       logError('handlePatchClick: ' + String(error));
@@ -221,7 +221,7 @@ function InstalledGamesSection() {
     if (!selectedGame) return;
 
     try {
-      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
+      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod-plus/fgmod-uninstaller.sh %COMMAND%');
       setResult(`DLSS mods will uninstall on next launch of ${selectedGame.name}.`);
     } catch (error) {
       logError('handleUnpatchClick: ' + String(error));
