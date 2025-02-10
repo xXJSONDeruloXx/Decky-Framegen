@@ -1,0 +1,9 @@
+# Core files that differ between branches
+package.json merge=path-preserve
+plugin.json merge=path-preserve
+defaults/assets/fgmod.sh merge=path-preserve
+defaults/assets/fgmod-uninstaller.sh merge=path-preserve
+defaults/assets/fgmod-remover.sh merge=path-preserve
+defaults/assets/prepare.sh merge=path-preserve
+src/index.tsx merge=path-preserve
+main.py merge=path-preserve
