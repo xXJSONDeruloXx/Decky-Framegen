@@ -116,14 +116,14 @@ function FGModInstallerSection() {
       {pathExists === false ? (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleInstallClick} disabled={installing}>
-            {installing ? "Installing..." : "Install FG Mod"}
+            {installing ? "Installing..." : "Install FG Mod Plus"}
           </ButtonItem>
         </PanelSectionRow>
       ) : null}
       {pathExists === true ? (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleUninstallClick} disabled={uninstalling}>
-            {uninstalling ? "Uninstalling..." : "Uninstall FG Mod"}
+            {uninstalling ? "Uninstalling..." : "Uninstall FG Mod Plus"}
           </ButtonItem>
         </PanelSectionRow>
       ) : null}
@@ -287,7 +287,7 @@ function InstalledGamesSection() {
 
 export default definePlugin(() => ({
   name: "Framegen Plugin",
-  titleView: <div>Decky Framegen</div>,
+  titleView: <div>Decky FG Plus</div>,
   alwaysRender: true,
   content: (
     <>

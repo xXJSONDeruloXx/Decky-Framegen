@@ -49,7 +49,7 @@
       ]
     }
   },
-  "remote_binary_bundling" : false,
+  "remote_binary_bundling" : true,
   "remote_binary": 
   [
     {
