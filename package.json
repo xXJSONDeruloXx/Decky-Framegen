@@ -125,7 +125,7 @@
     {
         "name": "fgmod",
         "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.03-Trunk/fgmod",
-        "sha256hash": "b8614b94db2f7ef03e0d1ede9a6249e98568ab15a22d4241887353969086452b"
+        "sha256hash": "e57adfa30764db132120028d161152f2d456dbe37df8388bfacad512b4ecf3c3"
     },
     {
         "name": "fgmod-uninstaller.sh",
