@@ -210,15 +210,6 @@ function InstalledGamesSection() {
   const handlePatchClick = async () => {
     if (!selectedGame) return;
 
-<<<<<<< .merge_file_7Rarco
-    try {
-      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod-plus/fgmod %COMMAND%');
-      setResult(`Launch options set for ${selectedGame.name}. You can now select DLSS in the game's menu.`);
-    } catch (error) {
-      logError('handlePatchClick: ' + String(error));
-      setResult(error instanceof Error ? `Error setting launch options: ${error.message}` : 'Error setting launch options');
-    }
-=======
     // Show confirmation modal
     showModal(
       <ConfirmModal 
@@ -239,7 +230,6 @@ function InstalledGamesSection() {
         }}
       />
     );
->>>>>>> .merge_file_ICEcCe
   };
 
   const handleUnpatchClick = async () => {
