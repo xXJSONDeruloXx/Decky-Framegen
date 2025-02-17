@@ -13,7 +13,7 @@ error_exit() {
   exit 1
 }
 
-mod_path="/usr/share/fgmod-plus"
+mod_path="/usr/share/fgmod-plus-plus"
 
 if [ "$#" -lt 1 ]; then
     echo "Usage: $0 program [program_arguments...]"
@@ -106,10 +106,38 @@ else
 fi
 
 if [[ $# -gt 1 ]]; then
+  # Log to both file and system journal
+  logger -t fgmod "=================="
+  logger -t fgmod "Debug Info (Launch Mode):"
+  logger -t fgmod "Number of arguments: $#"
+  for i in $(seq 1 $#); do
+    logger -t fgmod "Arg $i: ${!i}"
+  done
+  logger -t fgmod "Final executable path: $exe_folder_path"
+  logger -t fgmod "=================="
+  
   # Execute the original command
   export SteamDeck=0
   export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,dxgi=n,b"
   "$@"
 else
-  echo Done!
+  echo "Done!"
+  echo "----------------------------------------"
+  echo "Debug Info (Standalone Mode):"
+  echo "Number of arguments: $#"
+  for i in $(seq 1 $#); do
+    echo "Arg $i: ${!i}"
+  done
+  echo "Final executable path: $exe_folder_path"
+  echo "----------------------------------------"
+  
+  # Also log standalone mode to journal
+  logger -t fgmod "=================="
+  logger -t fgmod "Debug Info (Standalone Mode):"
+  logger -t fgmod "Number of arguments: $#"
+  for i in $(seq 1 $#); do
+    logger -t fgmod "Arg $i: ${!i}"
+  done
+  logger -t fgmod "Final executable path: $exe_folder_path"
+  logger -t fgmod "=================="
 fi

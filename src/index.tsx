@@ -3,7 +3,9 @@ import {
   PanelSection,
   PanelSectionRow,
   ButtonItem,
-  DropdownItem
+  DropdownItem,
+  ConfirmModal,
+  showModal
 } from "@decky/ui";
 import { definePlugin, callable } from "@decky/api";
 import { RiAiGenerate } from "react-icons/ri";
@@ -169,7 +171,7 @@ function FGModInstallerSection() {
       ) : null}
       <PanelSectionRow>
         <div>
-          Install the mod above, then select and patch a game.
+          Install the mod above, then select and patch a game below to enable DLSS in the game's menu.
         </div>
       </PanelSectionRow>
     </PanelSection>
@@ -208,6 +210,7 @@ function InstalledGamesSection() {
   const handlePatchClick = async () => {
     if (!selectedGame) return;
 
+<<<<<<< .merge_file_7Rarco
     try {
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod-plus/fgmod %COMMAND%');
       setResult(`Launch options set for ${selectedGame.name}. You can now select DLSS in the game's menu.`);
@@ -215,6 +218,28 @@ function InstalledGamesSection() {
       logError('handlePatchClick: ' + String(error));
       setResult(error instanceof Error ? `Error setting launch options: ${error.message}` : 'Error setting launch options');
     }
+=======
+    // Show confirmation modal
+    showModal(
+      <ConfirmModal 
+        strTitle={`Patch ${selectedGame.name}?`}
+        strDescription={
+          "WARNING: Decky Framegen does not unpatch games when uninstalled. Be sure to unpatch the game or verify the integrity of your game files if you choose to uninstall the plugin or the game has issues."
+        }
+        strOKButtonText="Yeah man, I wanna do it"
+        strCancelButtonText="Cancel"
+        onOK={async () => {
+          try {
+            await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod-plus/fgmod %COMMAND%');
+            setResult(`Launch options set for ${selectedGame.name}. You can now select DLSS in the game's menu.`);
+          } catch (error) {
+            logError('handlePatchClick: ' + String(error));
+            setResult(error instanceof Error ? `Error setting launch options: ${error.message}` : 'Error setting launch options');
+          }
+        }}
+      />
+    );
+>>>>>>> .merge_file_ICEcCe
   };
 
   const handleUnpatchClick = async () => {
