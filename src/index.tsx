@@ -171,7 +171,7 @@ function FGModInstallerSection() {
       ) : null}
       <PanelSectionRow>
         <div>
-          Install the mod above, then select and patch a game below to enable DLSS in the game's menu.
+          Install the mod above, then select and patch a game below to enable DLSS in the game's menu. "insert" key to open optiscaler. Delete and reinstall mod above to get latest optiscaler
         </div>
       </PanelSectionRow>
     </PanelSection>
