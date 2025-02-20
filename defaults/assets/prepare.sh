@@ -3,7 +3,7 @@
 set -x  # Enable debugging
 exec > >(tee -i /tmp/prepare.log) 2>&1  # Log output and errors
 
-mod_path="$HOME/fgmod-plus"
+mod_path="$HOME/fgmod"
 bin_path="$(dirname "$(realpath "$0")")/../bin"
 assets_path="$(dirname "$(realpath "$0")")"
 
@@ -19,18 +19,36 @@ cd "$mod_path" || exit 1
 # Copy all files from bin directory into the current directory
 cp "$bin_path"/* .
 
-# # Unzip assets.zip so that all files are in the modpath root, then remove the zip file
-# unzip -j -o assets.zip && rm assets.zip
+# Create temporary directory for asset download
+temp_dir=$(mktemp -d)
+cd "$temp_dir" || exit 1
 
-# Copy fgmod.sh and fgmod-uninstaller.sh from defaults/assets
-# cp "$assets_path/fgmod.sh" "$mod_path/fgmod" || exit 1
-# cp "$assets_path/fgmod-uninstaller.sh" "$mod_path" || exit 1
+# Download the latest OptiScaler nightly release
+echo "Downloading OptiScaler..."
+curl -L -o optiscaler.7z https://github.com/cdozdil/OptiScaler/releases/download/nightly/OptiScaler.7z
+
+# Extract the 7z file
+echo "Extracting nvngx.dll..."
+7z e optiscaler.7z nvngx.dll
+
+# Rename and move the DLL to mod path
+if [ -f nvngx.dll ]; then
+    mv nvngx.dll "$mod_path/dlss-enabler-upscaler.dll"
+    echo "Successfully installed dlss-enabler-upscaler.dll"
+else
+    echo "Error: Failed to extract nvngx.dll"
+    exit 1
+fi
+
+# Clean up
+cd "$mod_path" || exit 1
+rm -rf "$temp_dir"
 
 # Update paths in scripts
-sed -i 's|mod_path="/usr/share/fgmod-plus"|mod_path="'"$mod_path"'"|g' fgmod
+sed -i 's|mod_path="/usr/share/fgmod"|mod_path="'"$mod_path"'"|g' fgmod
 chmod +x fgmod
 
-sed -i 's|mod_path="/usr/share/fgmod-plus"|mod_path="'"$mod_path"'"|g' fgmod-uninstaller.sh
+sed -i 's|mod_path="/usr/share/fgmod"|mod_path="'"$mod_path"'"|g' fgmod-uninstaller.sh
 chmod +x fgmod-uninstaller.sh
 
 echo ""

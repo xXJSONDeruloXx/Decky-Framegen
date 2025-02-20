@@ -83,11 +83,6 @@
         "sha256hash": "4432bbd1a390874f3f0a503d45cc48d346abc3a8c0213c289f4b615bf0ee84f3"
     },
     {
-        "name": "dlss-enabler-upscaler.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.03-Trunk/dlss-enabler-upscaler.dll",
-        "sha256hash": "6bfcd56b4d8f6bdecd38862b5ad5a5c470ed90aee30e5468bbde84caeaa5408a"
-    },
-    {
         "name": "dlss-enabler.dll",
         "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.03-Trunk/dlss-enabler.dll",
         "sha256hash": "ef1a18d2cea4ad0f72328d1c811f177bc66ac2d70cb4e0f52536c5934a2b7714"
