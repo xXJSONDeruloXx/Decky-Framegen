@@ -3,7 +3,7 @@
 set -x  # Enable debugging
 exec > >(tee -i /tmp/prepare.log) 2>&1  # Log output and errors
 
-mod_path="$HOME/fgmod"
+mod_path="$HOME/fgmod-plus"
 bin_path="$(dirname "$(realpath "$0")")/../bin"
 assets_path="$(dirname "$(realpath "$0")")"
 
@@ -25,7 +25,23 @@ cd "$temp_dir" || exit 1
 
 # Download the latest OptiScaler nightly release
 echo "Downloading OptiScaler..."
-curl -L -o optiscaler.7z https://github.com/cdozdil/OptiScaler/releases/download/nightly/OptiScaler.7z
+# First get the latest release assets URL
+if ! latest_url=$(wget -qO- https://api.github.com/repos/cdozdil/OptiScaler/releases/tags/nightly | grep -o 'https://.*\.7z' | head -n1); then
+    echo "Error: Failed to fetch latest release URL"
+    exit 1
+fi
+
+echo "Downloading from: $latest_url"
+if ! wget -q --show-progress -O optiscaler.7z "$latest_url"; then
+    echo "Error: Failed to download OptiScaler"
+    exit 1
+fi
+
+# Verify the download
+if [ ! -f optiscaler.7z ] || [ ! -s optiscaler.7z ]; then
+    echo "Error: Download file is missing or empty"
+    exit 1
+fi
 
 # Extract the 7z file
 echo "Extracting nvngx.dll..."
