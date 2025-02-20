@@ -50,6 +50,7 @@ echo "Extracting nvngx.dll..."
 # Rename and move the DLL to mod path
 if [ -f nvngx.dll ]; then
     mv nvngx.dll "$mod_path/dlss-enabler-upscaler.dll"
+    chmod +x "$mod_path/dlss-enabler-upscaler.dll"
     echo "Successfully installed dlss-enabler-upscaler.dll"
 else
     echo "Error: Failed to extract nvngx.dll"
