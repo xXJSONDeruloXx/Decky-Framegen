@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 
-set -x  # Enable debugging
-exec > >(tee -i /tmp/prepare.log) 2>&1  # Log output and errors
+set -x
+exec > >(tee -i /tmp/fgmod-uninstaller.log) 2>&1
 
 error_exit() {
-  echo "$1"
+  echo "❌ $1"
   if [[ -n $STEAM_ZENITY ]]; then
     $STEAM_ZENITY --error --text "$1"
   else 
-    zenity --error --text "$1"
+    zenity --error --text "$1" || echo "Zenity failed to display error"
   fi
+  logger -t fgmod-uninstaller "❌ ERROR: $1"
   exit 1
 }
 
@@ -18,10 +19,8 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
-game_path=""
-mod_path="/usr/share/fgmod"
-
-# Locate the game folder based on the first argument
+# === Resolve Game Path ===
+exe_folder_path=""
 if [[ "$1" == *.exe ]]; then
   exe_folder_path=$(dirname "$1")
 else
@@ -44,9 +43,7 @@ else
 fi
 
 # Fallback to STEAM_COMPAT_INSTALL_PATH when no path was found
-if [[ ! -d $exe_folder_path ]] && [[ -n ${STEAM_COMPAT_INSTALL_PATH} ]]; then
-  exe_folder_path=${STEAM_COMPAT_INSTALL_PATH}
-fi
+[[ -z "$exe_folder_path" && -n "$STEAM_COMPAT_INSTALL_PATH" ]] && exe_folder_path="$STEAM_COMPAT_INSTALL_PATH"
 
 # Check for Unreal Engine game paths
 if [[ -d "$exe_folder_path/Engine" ]]; then
@@ -55,51 +52,65 @@ if [[ -d "$exe_folder_path/Engine" ]]; then
 fi
 
 # Verify the game folder exists
-if [[ ! -d $exe_folder_path ]]; then
-  error_exit "Unable to locate the game folder. Ensure the game is installed and the path is correct."
-fi
+[[ ! -d "$exe_folder_path" ]] && error_exit "Unable to locate the game folder: $exe_folder_path"
 
 # Avoid operating on the uninstaller's own directory
 script_dir=$(dirname "$(realpath "$0")")
-if [[ "$(realpath "$exe_folder_path")" == "$script_dir" ]]; then
-  error_exit "The target directory matches the script's directory. Aborting to prevent accidental deletion."
-fi
+[[ "$(realpath "$exe_folder_path")" == "$script_dir" ]] && error_exit "The target directory matches the script's directory. Aborting to prevent accidental deletion."
 
 # Change to the game directory
 cd "$exe_folder_path" || error_exit "Failed to change directory to $exe_folder_path"
 
 # Verify current directory before proceeding
-if [[ "$(pwd)" != "$exe_folder_path" ]]; then
-  error_exit "Unexpected working directory: $(pwd)"
-fi
+[[ "$(pwd)" != "$exe_folder_path" ]] && error_exit "Unexpected working directory: $(pwd)"
 
-# Log the resolved exe_folder_path for debugging
-echo "Resolved exe_folder_path: $exe_folder_path" >> /tmp/fgmod-uninstaller.log
+logger -t fgmod-uninstaller "🟢 Uninstalling from: $exe_folder_path"
 
-# Perform uninstallation
-rm -f "dlss-enabler.dll" "dxgi.dll" "nvngx-wrapper.dll" "_nvngx.dll"
-rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3_amd_is_better-3.0.dll"
-rm -f "dlss-enabler-upscaler.dll" "nvngx.ini"
-rm -f "d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_vk.dll"
-rm -f "nvapi64.dll" "fakenvapi.ini" "OptiScaler.log"
-rm -f "dlss-enabler.log" "dlssg_to_fsr3.log" "fakenvapi.log"
+# === Remove OptiScaler Files ===
+echo "🧹 Removing OptiScaler files..."
+rm -f "OptiScaler.dll" "dxgi.dll" "winmm.dll" "dbghelp.dll" "version.dll" "wininet.dll" "winhttp.dll" "OptiScaler.asi"
+rm -f "OptiScaler.ini" "OptiScaler.log"
 
-# Restore original DLLs if they exist
-mv -f "libxess.dll.b" "libxess.dll" 2>/dev/null # keeping this for legacy patched games to successfully revert changes with newer builds of plugin
-mv -f "d3dcompiler_47.dll.b" "d3dcompiler_47.dll" 2>/dev/null
-mv -f "amd_fidelityfx_dx12.dll.b" "amd_fidelityfx_dx12.dll" 2>/dev/null
-mv -f "amd_fidelityfx_vk.dll.b" "amd_fidelityfx_vk.dll" 2>/dev/null
+# === Remove Nukem FG Mod Files ===
+echo "🧹 Removing Nukem FG Mod files..."
+rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini" "dlssg_to_fsr3.log"
+rm -f "nvapi64.dll" "fakenvapi.ini" "fakenvapi.log"
+rm -f "amdxcffx64.dll"
 
-# Self-remove uninstaller (now optional for safety)
-echo "Uninstaller self-removal skipped for safety. Remove manually if needed."
+# === Remove Supporting Libraries ===
+echo "🧹 Removing supporting libraries..."
+rm -f "libxess.dll" "nvngx.dll" "nvngx.ini"
 
-echo "fgmod removed from this game."
+# === Remove Legacy Files ===
+echo "🧹 Removing legacy files..."
+rm -f "dlss-enabler.dll" "dlss-enabler-upscaler.dll" "dlss-enabler.log"
+rm -f "nvngx-wrapper.dll" "_nvngx.dll"
+rm -f "dlssg_to_fsr3_amd_is_better-3.0.dll"
 
+# === Restore Original DLLs ===
+echo "🔄 Restoring original DLLs..."
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_vk.dll" "nvapi64.dll" "amdxcffx64.dll" "libxess.dll")
+for dll in "${original_dlls[@]}"; do
+  if [[ -f "${dll}.b" ]]; then
+    mv "${dll}.b" "$dll"
+    echo "✅ Restored original $dll"
+    logger -t fgmod-uninstaller "✅ Restored original $dll"
+  fi
+done
+
+# === Self-remove uninstaller ===
+echo "🗑️ Removing uninstaller..."
+rm -f "fgmod-uninstaller.sh"
+
+echo "✅ fgmod removed from this game successfully!"
+logger -t fgmod-uninstaller "✅ fgmod removed from $exe_folder_path"
+
+# === Execute original command if provided ===
 if [[ $# -gt 1 ]]; then
-  echo "Launching the game..."
+  echo "🚀 Launching the game..."
   export SteamDeck=0
   export WINEDLLOVERRIDES="${WINEDLLOVERRIDES},dxgi=n,b"
   exec "$@"
 else
-  echo "Uninstallation complete. No game specified to run."
+  echo "✅ Uninstallation complete. No game specified to run."
 fi

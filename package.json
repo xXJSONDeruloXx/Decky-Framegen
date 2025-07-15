@@ -1,7 +1,7 @@
 {
   "name": "decky-framegen",
-  "version": "0.9.1",
-  "description": "plugin to swap DLSS with FSR, to enable upscaling and framegen in games without built in FSR.",
+  "version": "0.10.0",
+  "description": "plugin to install OptiScaler bleeding-edge and enable upscaling and framegen in games without built-in FSR.",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
@@ -49,108 +49,14 @@
       ]
     }
   },
-  "remote_binary_bundling" : false,
+  "remote_binary_bundling" : true,
   "remote_binary": 
   [
     {
-        "name": "DisableNvidiaSignatureChecks.reg",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/DisableNvidiaSignatureChecks.reg",
-        "sha256hash": "0db810f38303fc82b6fbd0cebd7f073bf0271d3bc5f065b7584598c4eda670f7"
-    },
-    {
-        "name": "RestoreNvidiaSignatureChecks.reg",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/RestoreNvidiaSignatureChecks.reg",
-        "sha256hash": "c096400b3106fcab37ac98fd33f8c7483af0f85b118d16133ee268aa122ddc68"
-    },
-    {
-        "name": "_nvngx.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/_nvngx.dll",
-        "sha256hash": "52a68acc4e477eeff598b5ca01f26215dc5aa487c8f150b02c27ad099c11de0b"
-    },
-    {
-        "name": "amd_fidelityfx_dx12.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/amd_fidelityfx_dx12.dll",
-        "sha256hash": "77809405a0ff464b63654f1264f0ec0fcf8f243dac7c15b5f5c032615520d143"
-    },
-    {
-        "name": "amd_fidelityfx_vk.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/amd_fidelityfx_vk.dll",
-        "sha256hash": "29d6c8c5088f6442f915d4b895dfffe09a2b5f0f1d36ab46b59d6b08c8a37b05"
-    },
-    {
-        "name": "d3dcompiler_47.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/d3dcompiler_47.dll",
-        "sha256hash": "4432bbd1a390874f3f0a503d45cc48d346abc3a8c0213c289f4b615bf0ee84f3"
-    },
-    {
-        "name": "dlss-enabler-upscaler.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/dlss-enabler-upscaler.dll",
-        "sha256hash": "9449350177f64b9be5a97440417b4c8c4b5c648a4ab41b057cad17134fe4b401"
-    },
-    {
-        "name": "dlss-enabler.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/dlss-enabler.dll",
-        "sha256hash": "00a880facebf5380cd9630f259fc28dd5e6f17875cdced958a2c3e38bed51b4e"
-    },
-    {
-        "name": "dlssg_to_fsr3.ini",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/dlssg_to_fsr3.ini",
-        "sha256hash": "30bd3c459e4db2159db0fd5f22d42a049153bab86ece7fad2febef145181ecbf"
-    },
-    {
-        "name": "dlssg_to_fsr3_amd_is_better-3.0.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/dlssg_to_fsr3_amd_is_better-3.0.dll",
-        "sha256hash": "ce794bd6489068bd316e38aceb6db323766a2172ecada0e868913526c8c06ab0"
-    },
-    {
-        "name": "dlssg_to_fsr3_amd_is_better.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/dlssg_to_fsr3_amd_is_better.dll",
-        "sha256hash": "bc0255ca9de9fe760fec38d91a6793b4ceb45684385a5085306edb8e74ae174d"
-    },
-    {
-        "name": "dxgi.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/dxgi.dll",
-        "sha256hash": "9ae73670c5dbb80f40d98176cb4426992f0cb0b9d0143b1d8083838d03b7d6fc"
-    },
-    {
-        "name": "dxvk.conf",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/dxvk.conf",
-        "sha256hash": "fb4b28b38fa5d36e95f76498416f7875815e94d2914878b70599cd6d87a98e12"
-    },
-    {
-        "name": "fakenvapi.ini",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/fakenvapi.ini",
-        "sha256hash": "672d65665cddb21a10b525daa987179871ddf97f328861a3e4b6a76671457e28"
-    },
-    {
-        "name": "fgmod",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/fgmod",
-        "sha256hash": "70bcf240e160cf5f75f861e40032cbc788889fd81bf3ca836466b8be1e561d58"
-    },
-    {
-        "name": "libxess.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/libxess.dll",
-        "sha256hash": "703ab8debc05ae209f6e4622cc06edf9f95a241f7ce68ee75c8955564d36ad70"
-    },
-    {
-        "name": "nvapi64.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/nvapi64.dll",
-        "sha256hash": "8c9d602442d291a6c51db7cdd9f79a0617de5742af42a56fcb918e4f9ca3ba52"
-    },
-    {
-        "name": "nvngx-wrapper.dll",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/nvngx-wrapper.dll",
-        "sha256hash": "6bb7f36f7dc3fffd588f2c6d2341c13f2a690ade0a7ef6c74ccdb2387cd5952e"
-    },
-    {
-        "name": "nvngx.ini",
-        "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/nvngx.ini",
-        "sha256hash": "3e083428c87054235aedb61cb4cc5afa1716a540146b978ddcd3ce2d590292a8"
-    },
-    {
-      "name": "fgmod-uninstaller.sh",
-      "url": "https://github.com/xXJSONDeruloXx/Decky-Framegen/releases/download/binaries-DLSS-Enabler-3.02-Stable/fgmod-uninstaller.sh",
-      "sha256hash": "6a61ee21f587ad1976522a36adfa610140f2b486fbc812ca334b55ce50fcd395"
+        "sha256hash": "e902c99be8a2501fac8ba636f79ed681964367a104e7e2e441d4bf4f894b2879",
+        "name": "BUNDLED_OptiScaler_v0.7.7-pre12_20250702.7z",
+        "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.7-pre12_20250702_unsigned_dll-20250704-021155/BUNDLED_OptiScaler_v0.7.7-pre12_20250702.7z",
+        "size": 60721676
     }
   ]
 }
