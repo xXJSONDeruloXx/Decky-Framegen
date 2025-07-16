@@ -128,6 +128,25 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"Failed to create version file: {e}")
             
+            # Modify OptiScaler.ini to set FGType=nukems
+            try:
+                ini_file = extract_path / "OptiScaler.ini"
+                if ini_file.exists():
+                    with open(ini_file, 'r') as f:
+                        content = f.read()
+                    
+                    # Replace FGType=auto with FGType=nukems
+                    updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
+                    
+                    with open(ini_file, 'w') as f:
+                        f.write(updated_content)
+                    
+                    decky.logger.info("Modified OptiScaler.ini to set FGType=nukems")
+                else:
+                    decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
+            except Exception as e:
+                decky.logger.error(f"Failed to modify OptiScaler.ini: {e}")
+            
             return {
                 "status": "success",
                 "message": f"Successfully extracted OptiScaler {version} to ~/fgmod",
