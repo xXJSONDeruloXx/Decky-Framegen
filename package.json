@@ -1,7 +1,7 @@
 {
   "name": "decky-framegen",
   "version": "0.10.0",
-  "description": "plugin to install OptiScaler bleeding-edge and enable upscaling and framegen in games without built-in FSR.",
+  "description": "plugin to install OptiScaler bleeding-edge and enable upscaling and framegen in a large variety of games.",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
