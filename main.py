@@ -1,4 +1,4 @@
-import decky  # Old-style Decky import
+import decky
 import os
 import subprocess
 import json
@@ -12,6 +12,109 @@ class Plugin:
 
     async def _unload(self):
         decky.logger.info("Framegen plugin unloaded.")
+        
+    def _create_renamed_copies(self, source_file, renames_dir):
+        """Create renamed copies of the OptiScaler.dll file"""
+        try:
+            renames_dir.mkdir(exist_ok=True)
+            
+            rename_files = [
+                "dxgi.dll",
+                "winmm.dll",
+                "dbghelp.dll",
+                "version.dll",
+                "wininet.dll",
+                "winhttp.dll",
+                "OptiScaler.asi"
+            ]
+            
+            if source_file.exists():
+                for rename_file in rename_files:
+                    dest_file = renames_dir / rename_file
+                    shutil.copy2(source_file, dest_file)
+                    decky.logger.info(f"Created renamed copy: {dest_file}")
+                return True
+            else:
+                decky.logger.error(f"Source file {source_file} does not exist")
+                return False
+                
+        except Exception as e:
+            decky.logger.error(f"Failed to create renamed copies: {e}")
+            return False
+    
+    def _copy_launcher_scripts(self, assets_dir, extract_path):
+        """Copy launcher scripts from assets directory"""
+        try:
+            # Copy fgmod script
+            fgmod_script_src = assets_dir / "fgmod.sh"
+            fgmod_script_dest = extract_path / "fgmod"
+            if fgmod_script_src.exists():
+                shutil.copy2(fgmod_script_src, fgmod_script_dest)
+                fgmod_script_dest.chmod(0o755)
+                decky.logger.info(f"Copied fgmod script to {fgmod_script_dest}")
+            
+            # Copy uninstaller script
+            uninstaller_src = assets_dir / "fgmod-uninstaller.sh"
+            uninstaller_dest = extract_path / "fgmod-uninstaller.sh"
+            if uninstaller_src.exists():
+                shutil.copy2(uninstaller_src, uninstaller_dest)
+                uninstaller_dest.chmod(0o755)
+                decky.logger.info(f"Copied uninstaller script to {uninstaller_dest}")
+                
+            return True
+        except Exception as e:
+            decky.logger.error(f"Failed to copy launcher scripts: {e}")
+            return False
+    
+    def _modify_optiscaler_ini(self, ini_file):
+        """Modify OptiScaler.ini to set FGType=nukems"""
+        try:
+            if ini_file.exists():
+                with open(ini_file, 'r') as f:
+                    content = f.read()
+                
+                # Replace FGType=auto with FGType=nukems
+                updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
+                
+                with open(ini_file, 'w') as f:
+                    f.write(updated_content)
+                
+                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems")
+                return True
+            else:
+                decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
+                return False
+        except Exception as e:
+            decky.logger.error(f"Failed to modify OptiScaler.ini: {e}")
+            return False
+    
+    def _setup_flatpak_compatibility(self, fgmod_path):
+        """Set up Flatpak compatibility if needed"""
+        try:
+            # Check if Flatpak Steam is installed
+            flatpak_check = subprocess.run(
+                ["flatpak", "list"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            
+            if flatpak_check.returncode == 0 and "com.valvesoftware.Steam" in flatpak_check.stdout:
+                decky.logger.info("Flatpak Steam detected, adding filesystem access")
+                
+                subprocess.run([
+                    "flatpak", "override", "--user", 
+                    f"--filesystem={fgmod_path}", 
+                    "com.valvesoftware.Steam"
+                ], check=False)
+                
+                decky.logger.info("Added Flatpak filesystem access")
+                return True
+            
+            return False
+        except Exception as e:
+            decky.logger.warning(f"Flatpak setup had issues (this is OK): {e}")
+            return False
 
     async def extract_static_optiscaler(self) -> dict:
         """Extract OptiScaler from the plugin's bin directory."""
@@ -62,55 +165,13 @@ class Plugin:
                 }
             
             # Create renamed copies of OptiScaler.dll
-            try:
-                renames_dir = extract_path / "renames"
-                renames_dir.mkdir(exist_ok=True)
-                
-                source_file = extract_path / "OptiScaler.dll"
-                
-                rename_files = [
-                    "dxgi.dll",
-                    "winmm.dll",
-                    "dbghelp.dll",
-                    "version.dll",
-                    "wininet.dll",
-                    "winhttp.dll",
-                    "OptiScaler.asi"
-                ]
-                
-                if source_file.exists():
-                    for rename_file in rename_files:
-                        dest_file = renames_dir / rename_file
-                        shutil.copy2(source_file, dest_file)
-                        decky.logger.info(f"Created renamed copy: {dest_file}")
-                else:
-                    decky.logger.error(f"Source file {source_file} does not exist")
-                    
-            except Exception as e:
-                decky.logger.error(f"Failed to create renamed copies: {e}")
+            source_file = extract_path / "OptiScaler.dll"
+            renames_dir = extract_path / "renames"
+            self._create_renamed_copies(source_file, renames_dir)
             
             # Copy launcher scripts from assets
-            try:
-                assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
-                
-                # Copy fgmod script
-                fgmod_script_src = assets_dir / "fgmod.sh"
-                fgmod_script_dest = extract_path / "fgmod"
-                if fgmod_script_src.exists():
-                    shutil.copy2(fgmod_script_src, fgmod_script_dest)
-                    fgmod_script_dest.chmod(0o755)
-                    decky.logger.info(f"Copied fgmod script to {fgmod_script_dest}")
-                
-                # Copy uninstaller script
-                uninstaller_src = assets_dir / "fgmod-uninstaller.sh"
-                uninstaller_dest = extract_path / "fgmod-uninstaller.sh"
-                if uninstaller_src.exists():
-                    shutil.copy2(uninstaller_src, uninstaller_dest)
-                    uninstaller_dest.chmod(0o755)
-                    decky.logger.info(f"Copied uninstaller script to {uninstaller_dest}")
-                    
-            except Exception as e:
-                decky.logger.error(f"Failed to copy launcher scripts: {e}")
+            assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
+            self._copy_launcher_scripts(assets_dir, extract_path)
             
             # Extract version from filename
             version_match = optiscaler_archive.name.replace('.7z', '')
@@ -129,23 +190,8 @@ class Plugin:
                 decky.logger.error(f"Failed to create version file: {e}")
             
             # Modify OptiScaler.ini to set FGType=nukems
-            try:
-                ini_file = extract_path / "OptiScaler.ini"
-                if ini_file.exists():
-                    with open(ini_file, 'r') as f:
-                        content = f.read()
-                    
-                    # Replace FGType=auto with FGType=nukems
-                    updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
-                    
-                    with open(ini_file, 'w') as f:
-                        f.write(updated_content)
-                    
-                    decky.logger.info("Modified OptiScaler.ini to set FGType=nukems")
-                else:
-                    decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
-            except Exception as e:
-                decky.logger.error(f"Failed to modify OptiScaler.ini: {e}")
+            ini_file = extract_path / "OptiScaler.ini"
+            self._modify_optiscaler_ini(ini_file)
             
             return {
                 "status": "success",
@@ -197,30 +243,8 @@ class Plugin:
                 }
             
             # Handle Flatpak compatibility
-            try:
-                fgmod_path = Path(decky.HOME) / "fgmod"
-                
-                # Check if Flatpak Steam is installed
-                flatpak_check = subprocess.run(
-                    ["flatpak", "list"],
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
-                
-                if flatpak_check.returncode == 0 and "com.valvesoftware.Steam" in flatpak_check.stdout:
-                    decky.logger.info("Flatpak Steam detected, adding filesystem access")
-                    
-                    subprocess.run([
-                        "flatpak", "override", "--user", 
-                        f"--filesystem={fgmod_path}", 
-                        "com.valvesoftware.Steam"
-                    ], check=False)
-                    
-                    decky.logger.info("Added Flatpak filesystem access")
-                
-            except Exception as e:
-                decky.logger.warning(f"Flatpak setup had issues (this is OK): {e}")
+            fgmod_path = Path(decky.HOME) / "fgmod"
+            self._setup_flatpak_compatibility(fgmod_path)
             
             return {
                 "status": "success",
