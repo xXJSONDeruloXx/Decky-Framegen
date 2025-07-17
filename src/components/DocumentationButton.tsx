@@ -1,5 +1,5 @@
 import { PanelSection, PanelSectionRow, ButtonItem } from "@decky/ui";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { FaClipboard, FaBook } from "react-icons/fa";
 
 export function DocumentationButton() {
   const handleDocClick = () => {
@@ -18,7 +18,7 @@ export function DocumentationButton() {
           onClick={handleDocClick}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <FaExternalLinkAlt />
+            <FaClipboard />
             <div>Copy Launch Command</div>
           </div>
         </ButtonItem>
@@ -29,7 +29,7 @@ export function DocumentationButton() {
           onClick={handleOptiScalerClick}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <FaExternalLinkAlt />
+            <FaBook />
             <div>OptiScaler Wiki</div>
           </div>
         </ButtonItem>
