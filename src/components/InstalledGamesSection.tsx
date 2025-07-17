@@ -3,7 +3,7 @@ import { PanelSection, PanelSectionRow, ButtonItem, DropdownItem, ConfirmModal, 
 import { listInstalledGames, logError } from "../api";
 import { safeAsyncOperation } from "../utils";
 import { STYLES } from "../utils/constants";
-import { GameInfo } from "../types";
+import { GameInfo } from "../types/index";
 
 export function InstalledGamesSection() {
   const [games, setGames] = useState<GameInfo[]>([]);

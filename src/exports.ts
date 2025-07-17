@@ -8,7 +8,7 @@ export * from './utils';
 export * from './utils/constants';
 
 // Re-export types
-export * from './types';
+export * from './types/index';
 
 // Re-export API
 export * from './api';

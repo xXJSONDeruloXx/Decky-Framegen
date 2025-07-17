@@ -1,7 +1,7 @@
 import { PanelSectionRow } from "@decky/ui";
 import { FC } from "react";
 import { STYLES } from "../utils/constants";
-import { ApiResponse } from "../types";
+import { ApiResponse } from "../types/index";
 
 export type OperationResult = ApiResponse;
 
