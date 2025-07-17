@@ -3,7 +3,7 @@ import { FaExternalLinkAlt } from "react-icons/fa";
 
 export function DocumentationButton() {
   const handleDocClick = () => {
-    window.open("https://github.com/xXJSONDeruloXx/Decky-Framegen", "_blank");
+    window.open("https://github.com/xXJSONDeruloXx/Decky-Framegen/wiki", "_blank");
   };
 
   return (
@@ -15,7 +15,7 @@ export function DocumentationButton() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <FaExternalLinkAlt />
-            <div>Wiki and Clipboard</div>
+            <div>Copy Launch Command</div>
           </div>
         </ButtonItem>
       </PanelSectionRow>
