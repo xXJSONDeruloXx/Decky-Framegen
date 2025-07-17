@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["DLSS", "Framegen","upscaling","FSR"],
-    "description": "Allows using FSR for upscaling and frame generation in games with DLSS support. Uses DLSS Enabler and Optiscaler.",
+    "description": "Allows using FSR for upscaling and frame generation in games with DLSS support. Uses the latest OptiScaler bleeding-edge build with static linking.",
     "image": "https://raw.githubusercontent.com/xXJSONDeruloXx/Decky-Framegen/main/assets/decky_framegen.jpeg"
   }
 }

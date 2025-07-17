@@ -2,6 +2,8 @@ import decky  # Old-style Decky import
 import os
 import subprocess
 import json
+import shutil
+import re
 from pathlib import Path
 
 class Plugin:
@@ -11,84 +13,240 @@ class Plugin:
     async def _unload(self):
         decky.logger.info("Framegen plugin unloaded.")
 
-    async def run_uninstall_fgmod(self) -> dict:
+    async def extract_static_optiscaler(self) -> dict:
+        """Extract OptiScaler from the plugin's bin directory."""
         try:
-            result = subprocess.run(
-                ["/bin/bash", Path(decky.DECKY_PLUGIN_DIR) / "assets" / "fgmod-remover.sh"],
+            # Set up paths
+            bin_path = Path(decky.DECKY_PLUGIN_DIR) / "bin"
+            extract_path = Path(decky.HOME) / "fgmod"
+            
+            # Find the OptiScaler archive in the bin directory
+            optiscaler_archive = None
+            for file in bin_path.glob("*.7z"):
+                if "OptiScaler" in file.name:
+                    optiscaler_archive = file
+                    break
+            
+            if not optiscaler_archive:
+                return {"status": "error", "message": "OptiScaler archive not found in plugin bin directory"}
+            
+            # Clean up existing directory
+            if extract_path.exists():
+                shutil.rmtree(extract_path)
+            
+            extract_path.mkdir(exist_ok=True)
+            
+            decky.logger.info(f"Extracting {optiscaler_archive.name} to {extract_path}")
+            
+            # Extract the 7z file
+            extract_cmd = [
+                "7z",
+                "x",
+                "-y",
+                "-o" + str(extract_path),
+                str(optiscaler_archive)
+            ]
+            
+            extract_result = subprocess.run(
+                extract_cmd,
                 capture_output=True,
                 text=True,
-                check=True
+                check=False
             )
-            return {"status": "success", "output": result.stdout}
-        except subprocess.CalledProcessError as e:
-            decky.logger.error(e.output)
-            return {"status": "error", "message": str(e), "output": e.output}
+            
+            if extract_result.returncode != 0:
+                decky.logger.error(f"Extraction failed: {extract_result.stderr}")
+                return {
+                    "status": "error",
+                    "message": f"Failed to extract OptiScaler archive: {extract_result.stderr}"
+                }
+            
+            # Create renamed copies of OptiScaler.dll
+            try:
+                renames_dir = extract_path / "renames"
+                renames_dir.mkdir(exist_ok=True)
+                
+                source_file = extract_path / "OptiScaler.dll"
+                
+                rename_files = [
+                    "dxgi.dll",
+                    "winmm.dll",
+                    "dbghelp.dll",
+                    "version.dll",
+                    "wininet.dll",
+                    "winhttp.dll",
+                    "OptiScaler.asi"
+                ]
+                
+                if source_file.exists():
+                    for rename_file in rename_files:
+                        dest_file = renames_dir / rename_file
+                        shutil.copy2(source_file, dest_file)
+                        decky.logger.info(f"Created renamed copy: {dest_file}")
+                else:
+                    decky.logger.error(f"Source file {source_file} does not exist")
+                    
+            except Exception as e:
+                decky.logger.error(f"Failed to create renamed copies: {e}")
+            
+            # Copy launcher scripts from assets
+            try:
+                assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
+                
+                # Copy fgmod script
+                fgmod_script_src = assets_dir / "fgmod.sh"
+                fgmod_script_dest = extract_path / "fgmod"
+                if fgmod_script_src.exists():
+                    shutil.copy2(fgmod_script_src, fgmod_script_dest)
+                    fgmod_script_dest.chmod(0o755)
+                    decky.logger.info(f"Copied fgmod script to {fgmod_script_dest}")
+                
+                # Copy uninstaller script
+                uninstaller_src = assets_dir / "fgmod-uninstaller.sh"
+                uninstaller_dest = extract_path / "fgmod-uninstaller.sh"
+                if uninstaller_src.exists():
+                    shutil.copy2(uninstaller_src, uninstaller_dest)
+                    uninstaller_dest.chmod(0o755)
+                    decky.logger.info(f"Copied uninstaller script to {uninstaller_dest}")
+                    
+            except Exception as e:
+                decky.logger.error(f"Failed to copy launcher scripts: {e}")
+            
+            # Extract version from filename
+            version_match = optiscaler_archive.name.replace('.7z', '')
+            if '_v' in version_match:
+                version = 'v' + version_match.split('_v')[1]
+            else:
+                version = version_match
+            
+            # Create version file
+            version_file = extract_path / "version.txt"
+            try:
+                with open(version_file, 'w') as f:
+                    f.write(version)
+                decky.logger.info(f"Created version file: {version}")
+            except Exception as e:
+                decky.logger.error(f"Failed to create version file: {e}")
+            
+            # Modify OptiScaler.ini to set FGType=nukems
+            try:
+                ini_file = extract_path / "OptiScaler.ini"
+                if ini_file.exists():
+                    with open(ini_file, 'r') as f:
+                        content = f.read()
+                    
+                    # Replace FGType=auto with FGType=nukems
+                    updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
+                    
+                    with open(ini_file, 'w') as f:
+                        f.write(updated_content)
+                    
+                    decky.logger.info("Modified OptiScaler.ini to set FGType=nukems")
+                else:
+                    decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
+            except Exception as e:
+                decky.logger.error(f"Failed to modify OptiScaler.ini: {e}")
+            
+            return {
+                "status": "success",
+                "message": f"Successfully extracted OptiScaler {version} to ~/fgmod",
+                "version": version
+            }
+            
+        except Exception as e:
+            decky.logger.error(f"Extract failed: {str(e)}")
+            return {"status": "error", "message": f"Extract failed: {str(e)}"}
+
+    async def run_uninstall_fgmod(self) -> dict:
+        try:
+            # Remove fgmod directory
+            fgmod_path = Path(decky.HOME) / "fgmod"
+            
+            if fgmod_path.exists():
+                shutil.rmtree(fgmod_path)
+                decky.logger.info(f"Removed directory: {fgmod_path}")
+                return {
+                    "status": "success", 
+                    "output": "Successfully removed fgmod directory"
+                }
+            else:
+                return {
+                    "status": "success", 
+                    "output": "No fgmod directory found to remove"
+                }
+            
+        except Exception as e:
+            decky.logger.error(f"Uninstall error: {str(e)}")
+            return {
+                "status": "error", 
+                "message": f"Uninstall failed: {str(e)}", 
+                "output": str(e)
+            }
 
     async def run_install_fgmod(self) -> dict:
         try:
-            assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
-            prepare_script = assets_dir / "prepare.sh"
-
-            if not prepare_script.exists():
-                decky.logger.error(f"prepare.sh not found: {prepare_script}")
+            decky.logger.info("Starting OptiScaler installation from static bundle")
+            
+            # Extract the static OptiScaler bundle
+            extract_result = await self.extract_static_optiscaler()
+            
+            if extract_result["status"] != "success":
                 return {
                     "status": "error",
-                    "message": f"prepare.sh not found in plugin assets."
+                    "message": f"OptiScaler extraction failed: {extract_result.get('message', 'Unknown error')}"
                 }
-
-            # Ensure prepare.sh has execution permissions
-            prepare_script.chmod(0o755)
-
-            # Run prepare.sh directly from the plugin's assets folder
-            process = subprocess.run(
-                ["/bin/bash", str(prepare_script)],
-                cwd=str(assets_dir),  # Run in assets directory to use correct paths
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
-
-            decky.logger.info(f"Script output:\n{process.stdout}")
-            decky.logger.error(f"Script errors:\n{process.stderr}")
-
-            if "All done!" not in process.stdout:
-                decky.logger.error("Installation did not complete successfully")
-                return {
-                    "status": "error",
-                    "message": process.stdout + process.stderr
-                }
-
+            
+            # Handle Flatpak compatibility
+            try:
+                fgmod_path = Path(decky.HOME) / "fgmod"
+                
+                # Check if Flatpak Steam is installed
+                flatpak_check = subprocess.run(
+                    ["flatpak", "list"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                
+                if flatpak_check.returncode == 0 and "com.valvesoftware.Steam" in flatpak_check.stdout:
+                    decky.logger.info("Flatpak Steam detected, adding filesystem access")
+                    
+                    subprocess.run([
+                        "flatpak", "override", "--user", 
+                        f"--filesystem={fgmod_path}", 
+                        "com.valvesoftware.Steam"
+                    ], check=False)
+                    
+                    decky.logger.info("Added Flatpak filesystem access")
+                
+            except Exception as e:
+                decky.logger.warning(f"Flatpak setup had issues (this is OK): {e}")
+            
             return {
                 "status": "success",
-                "output": "You can now replace DLSS with FSR Frame Gen!"
+                "output": "Successfully installed OptiScaler with all necessary components! You can now replace DLSS with FSR Frame Gen!"
             }
 
-        except subprocess.TimeoutExpired:
-            decky.logger.error("Installation script timed out")
-            return {
-                "status": "error",
-                "message": "Installation timed out"
-            }
-        except subprocess.CalledProcessError as e:
-            decky.logger.error(f"Script error: {e.stderr}")
-            return {
-                "status": "error",
-                "message": e.stderr
-            }
         except Exception as e:
-            decky.logger.error(f"Unexpected error: {str(e)}")
+            decky.logger.error(f"Unexpected error during installation: {str(e)}")
             return {
                 "status": "error",
-                "message": str(e)
+                "message": f"Installation failed: {str(e)}"
             }
 
     async def check_fgmod_path(self) -> dict:
         path = Path(decky.HOME) / "fgmod"
         required_files = [
-            "amd_fidelityfx_dx12.dll", "amd_fidelityfx_vk.dll", "d3dcompiler_47.dll", "DisableNvidiaSignatureChecks.reg",
-            "dlss-enabler.dll", "dlss-enabler-upscaler.dll", "dlssg_to_fsr3_amd_is_better-3.0.dll", "dlssg_to_fsr3_amd_is_better.dll",
-            "dlssg_to_fsr3.ini", "dxgi.dll", "dxvk.conf", "fakenvapi.ini", "fgmod", "fgmod-uninstaller.sh",
-            "libxess.dll", "nvapi64.dll", "nvngx.ini", "nvngx-wrapper.dll", "_nvngx.dll", "RestoreNvidiaSignatureChecks.reg"
+            "OptiScaler.dll",
+            "dlssg_to_fsr3_amd_is_better.dll", 
+            "fakenvapi.ini", 
+            "nvapi64.dll",
+            "amdxcffx64.dll",
+            "amd_fidelityfx_dx12.dll",
+            "amd_fidelityfx_vk.dll", 
+            "libxess.dll",
+            "fgmod",
+            "fgmod-uninstaller.sh"
         ]
 
         if path.exists():
@@ -103,6 +261,7 @@ class Plugin:
         try:
             steam_root = Path(decky.HOME) / ".steam" / "steam"
             library_file = Path(steam_root) / "steamapps" / "libraryfolders.vdf"
+            
 
             if not library_file.exists():
                 return {"status": "error", "message": "libraryfolders.vdf not found"}
@@ -121,7 +280,7 @@ class Plugin:
                     continue
 
                 for appmanifest in steamapps_path.glob("appmanifest_*.acf"):
-                    game_info = {"appid": None, "name": None}
+                    game_info = {"appid": "", "name": ""}
 
                     try:
                         with open(appmanifest, "r", encoding="utf-8") as file:

@@ -111,21 +111,21 @@ function FGModInstallerSection() {
       {pathExists !== null ? (
         <PanelSectionRow>
           <div style={{ color: pathExists ? "green" : "red" }}>
-            {pathExists ? "Mod Is Installed" : "Mod Not Installed"}
+            {pathExists ? "OptiScaler Mod Is Installed" : "OptiScaler Mod Not Installed"}
           </div>
         </PanelSectionRow>
       ) : null}
       {pathExists === false ? (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleInstallClick} disabled={installing}>
-            {installing ? "Installing..." : "Install FG Mod"}
+            {installing ? "Installing..." : "Install OptiScaler FG Mod"}
           </ButtonItem>
         </PanelSectionRow>
       ) : null}
       {pathExists === true ? (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleUninstallClick} disabled={uninstalling}>
-            {uninstalling ? "Uninstalling..." : "Uninstall FG Mod"}
+            {uninstalling ? "Uninstalling..." : "Uninstall OptiScaler FG Mod"}
           </ButtonItem>
         </PanelSectionRow>
       ) : null}
@@ -171,7 +171,7 @@ function FGModInstallerSection() {
       ) : null}
       <PanelSectionRow>
         <div>
-          Install the mod above, then select and patch a game below to enable DLSS in the game's menu.
+          Install the OptiScaler-based mod above, then select and patch a game below to enable DLSS replacement with FSR Frame Generation. Map a button to "insert" key to bring up the OptiScaler menu in-game.
         </div>
       </PanelSectionRow>
     </PanelSection>
@@ -222,7 +222,7 @@ function InstalledGamesSection() {
         onOK={async () => {
           try {
             await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
-            setResult(`Launch options set for ${selectedGame.name}. You can now select DLSS in the game's menu.`);
+            setResult(`Launch options set for ${selectedGame.name}. You can now select DLSS in the game's menu, and access OptiScaler with Insert key.`);
           } catch (error) {
             logError('handlePatchClick: ' + String(error));
             setResult(error instanceof Error ? `Error setting launch options: ${error.message}` : 'Error setting launch options');
@@ -237,7 +237,7 @@ function InstalledGamesSection() {
 
     try {
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
-      setResult(`DLSS mods will uninstall on next launch of ${selectedGame.name}.`);
+      setResult(`OptiScaler will uninstall on next launch of ${selectedGame.name}.`);
     } catch (error) {
       logError('handleUnpatchClick: ' + String(error));
       setResult(error instanceof Error ? `Error clearing launch options: ${error.message}` : 'Error clearing launch options');
