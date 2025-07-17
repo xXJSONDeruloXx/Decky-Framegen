@@ -2,6 +2,7 @@ import { definePlugin } from "@decky/api";
 import { RiAiGenerate } from "react-icons/ri";
 import { FGModInstallerSection } from "./components/FGModInstallerSection";
 import { InstalledGamesSection } from "./components/InstalledGamesSection";
+import { DocumentationButton } from "./components/DocumentationButton";
 
 export default definePlugin(() => ({
   name: "Framegen Plugin",
@@ -11,6 +12,7 @@ export default definePlugin(() => ({
     <>
       <FGModInstallerSection />
       <InstalledGamesSection />
+      <DocumentationButton />
     </>
   ),
   icon: <RiAiGenerate />,
