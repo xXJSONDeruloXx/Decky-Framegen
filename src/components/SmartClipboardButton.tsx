@@ -3,11 +3,21 @@ import { PanelSectionRow, ButtonItem } from "@decky/ui";
 import { FaClipboard } from "react-icons/fa";
 import { toaster } from "@decky/api";
 
-export function SmartClipboardButton() {
+interface SmartClipboardButtonProps {
+  command?: string;
+  buttonText?: string;
+  successMessage?: string;
+}
+
+export function SmartClipboardButton({ 
+  command = "~/fgmod/fgmod %command%",
+  buttonText = "Copy Launch Command",
+  successMessage = "Launch option ready to paste"
+}: SmartClipboardButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const getLaunchOptionText = (): string => {
-    return "~/fgmod/fgmod %command%";
+    return command;
   };
 
   const copyToClipboard = async () => {
@@ -54,7 +64,7 @@ export function SmartClipboardButton() {
           if (readBack === text) {
             toaster.toast({
               title: "Copied to Clipboard!",
-              body: "Launch option ready to paste"
+              body: successMessage
             });
           } else {
             // Copy worked but verification failed - still consider it success
@@ -103,7 +113,7 @@ export function SmartClipboardButton() {
           ) : (
             <FaClipboard />
           )}
-          <div>{isLoading ? "Copying..." : "Copy Launch Command"}</div>
+          <div>{isLoading ? "Copying..." : buttonText}</div>
         </div>
       </ButtonItem>
       <style>{`

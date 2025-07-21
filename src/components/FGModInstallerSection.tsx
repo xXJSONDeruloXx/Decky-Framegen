@@ -101,7 +101,19 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
       ) : null}
       
       {pathExists === true ? (
-        <SmartClipboardButton />
+        <SmartClipboardButton 
+          command="~/fgmod/fgmod %command%"
+          buttonText="Copy Patch Command"
+          successMessage="Patch command ready to paste"
+        />
+      ) : null}
+      
+      {pathExists === true ? (
+        <SmartClipboardButton 
+          command="~/fgmod/fgmod-uninstaller.sh %command%"
+          buttonText="Copy Unpatch Command"
+          successMessage="Unpatch command ready to paste"
+        />
       ) : null}
     </PanelSection>
   );
