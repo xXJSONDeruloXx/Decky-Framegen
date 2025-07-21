@@ -12,25 +12,30 @@ interface ResultDisplayProps {
 export const ResultDisplay: FC<ResultDisplayProps> = ({ result }) => {
   if (!result) return null;
 
+  const isSuccess = result.status === "success";
+  
   return (
     <PanelSectionRow>
-      <div>
-        <strong>Status:</strong>{" "}
-        <span style={result.status === "success" ? STYLES.statusSuccess : STYLES.statusError}>
-          {result.status === "success" ? "Success" : "Error"}
-        </span>
-        <br />
-        {result.output ? (
+      <div style={isSuccess ? STYLES.statusInstalled : STYLES.statusNotInstalled}>
+        {isSuccess ? (
           <>
-            <strong>Output:</strong>
-            <pre style={STYLES.preWrap}>{result.output}</pre>
+            ✅ {result.output?.includes("uninstall") || result.output?.includes("remov") 
+              ? "OptiScaler mod removed successfully" 
+              : "OptiScaler mod installed successfully"}
           </>
-        ) : null}
-        {result.message ? (
+        ) : (
           <>
-            <strong>Error:</strong> {result.message}
+            ❌ <strong>Error:</strong> {result.message || "Operation failed"}
           </>
-        ) : null}
+        )}
+        {result.output && !isSuccess && (
+          <details style={{ marginTop: '8px' }}>
+            <summary style={{ cursor: 'pointer', fontSize: '12px' }}>View Details</summary>
+            <pre style={{ ...STYLES.preWrap, fontSize: '11px', marginTop: '4px' }}>
+              {result.output}
+            </pre>
+          </details>
+        )}
       </div>
     </PanelSectionRow>
   );
