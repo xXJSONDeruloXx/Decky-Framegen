@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { PanelSection, PanelSectionRow, ButtonItem } from "@decky/ui";
 import { runInstallFGMod, runUninstallFGMod } from "../api";
 import { OperationResult } from "./ResultDisplay";
+import { SmartClipboardButton } from "./SmartClipboardButton";
 import { createAutoCleanupTimer } from "../utils";
 import { TIMEOUTS, MESSAGES, STYLES } from "../utils/constants";
 
@@ -97,6 +98,10 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
             </div>
           </div>
         </PanelSectionRow>
+      ) : null}
+      
+      {pathExists === true ? (
+        <SmartClipboardButton />
       ) : null}
     </PanelSection>
   );

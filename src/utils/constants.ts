@@ -62,5 +62,5 @@ export const MESSAGES = {
   installSuccess: "✅ OptiScaler mod installed successfully!",
   uninstallSuccess: "✅ OptiScaler mod removed successfully.",
   instructionTitle: "How to Use:",
-  instructionText: "Select and patch a game below to enable frame generation (or use clipboard button to copy and paste into launch options)\n\nIn-game: Enable DLSS in graphics settings, or assign a back button to keyboard's 'Insert' key for extended OptiScaler options"
+  instructionText: "Select and patch a game below to enable frame generation, or use the Copy Launch Command button to copy the launch option for manual setup.\n\nIn-game: Enable DLSS in graphics settings, or assign a back button to keyboard's 'Insert' key for extended OptiScaler options"
 };
