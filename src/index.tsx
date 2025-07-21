@@ -30,7 +30,7 @@ function MainContent() {
       <FGModInstallerSection pathExists={pathExists} setPathExists={setPathExists} />
       {pathExists === true ? (
         <>
-          <InstalledGamesSection />
+          {/* <InstalledGamesSection /> */}
           <DocumentationButton />
         </>
       ) : null}
