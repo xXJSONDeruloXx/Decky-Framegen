@@ -1,30 +1,20 @@
 import { useState, useEffect } from "react";
 import { PanelSection, PanelSectionRow, ButtonItem } from "@decky/ui";
-import { checkFGModPath, runInstallFGMod, runUninstallFGMod } from "../api";
+import { runInstallFGMod, runUninstallFGMod } from "../api";
 import { OperationResult } from "./ResultDisplay";
-import { createAutoCleanupTimer, safeAsyncOperation } from "../utils";
+import { createAutoCleanupTimer } from "../utils";
 import { TIMEOUTS, MESSAGES, STYLES } from "../utils/constants";
 
-export function FGModInstallerSection() {
+interface FGModInstallerSectionProps {
+  pathExists: boolean | null;
+  setPathExists: (exists: boolean | null) => void;
+}
+
+export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstallerSectionProps) {
   const [installing, setInstalling] = useState(false);
   const [uninstalling, setUninstalling] = useState(false);
   const [installResult, setInstallResult] = useState<OperationResult | null>(null);
   const [uninstallResult, setUninstallResult] = useState<OperationResult | null>(null);
-  const [pathExists, setPathExists] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const checkPath = async () => {
-      const result = await safeAsyncOperation(
-        async () => await checkFGModPath(),
-        'useEffect -> checkPath'
-      );
-      if (result) setPathExists(result.exists);
-    };
-    
-    checkPath(); // Initial check
-    const intervalId = setInterval(checkPath, TIMEOUTS.pathCheck); // Check every 3 seconds
-    return () => clearInterval(intervalId); // Cleanup interval on component unmount
-  }, []);
 
   useEffect(() => {
     if (installResult) {
@@ -45,6 +35,9 @@ export function FGModInstallerSection() {
       setInstalling(true);
       const result = await runInstallFGMod();
       setInstallResult(result);
+      if (result.status === "success") {
+        setPathExists(true);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -57,6 +50,9 @@ export function FGModInstallerSection() {
       setUninstalling(true);
       const result = await runUninstallFGMod();
       setUninstallResult(result);
+      if (result.status === "success") {
+        setPathExists(false);
+      }
     } catch (e) {
       console.error(e);
     } finally {
