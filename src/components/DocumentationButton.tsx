@@ -12,6 +12,7 @@ export function DocumentationButton() {
 
   return (
     <PanelSection>
+      {/* 
       <PanelSectionRow>
         <ButtonItem
           layout="below"
@@ -23,6 +24,7 @@ export function DocumentationButton() {
           </div>
         </ButtonItem>
       </PanelSectionRow>
+      */}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
