@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PanelSection, PanelSectionRow, ButtonItem } from "@decky/ui";
 import { checkFGModPath, runInstallFGMod, runUninstallFGMod } from "../api";
-import { ResultDisplay, OperationResult } from "./ResultDisplay";
+import { OperationResult } from "./ResultDisplay";
 import { createAutoCleanupTimer, safeAsyncOperation } from "../utils";
 import { TIMEOUTS, MESSAGES, STYLES } from "../utils/constants";
 
@@ -68,10 +68,8 @@ export function FGModInstallerSection() {
     <PanelSection>
       {pathExists !== null ? (
         <PanelSectionRow>
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-            <div style={pathExists ? STYLES.statusInstalled : STYLES.statusNotInstalled}>
-              {pathExists ? MESSAGES.modInstalled : MESSAGES.modNotInstalled}
-            </div>
+          <div style={pathExists ? STYLES.statusInstalled : STYLES.statusNotInstalled}>
+            {pathExists ? MESSAGES.modInstalled : MESSAGES.modNotInstalled}
           </div>
         </PanelSectionRow>
       ) : null}
@@ -91,9 +89,6 @@ export function FGModInstallerSection() {
           </ButtonItem>
         </PanelSectionRow>
       ) : null}
-      
-      <ResultDisplay result={installResult} />
-      <ResultDisplay result={uninstallResult} />
       
       {pathExists === true ? (
         <PanelSectionRow>
