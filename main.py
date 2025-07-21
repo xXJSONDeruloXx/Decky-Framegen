@@ -67,7 +67,7 @@ class Plugin:
             return False
     
     def _modify_optiscaler_ini(self, ini_file):
-        """Modify OptiScaler.ini to set FGType=nukems"""
+        """Modify OptiScaler.ini to set FGType=nukems and Fsr4Update=true"""
         try:
             if ini_file.exists():
                 with open(ini_file, 'r') as f:
@@ -76,10 +76,13 @@ class Plugin:
                 # Replace FGType=auto with FGType=nukems
                 updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
                 
+                # Replace Fsr4Update=auto with Fsr4Update=true
+                updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
+                
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
                 
-                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems")
+                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems and Fsr4Update=true")
                 return True
             else:
                 decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
@@ -189,7 +192,7 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"Failed to create version file: {e}")
             
-            # Modify OptiScaler.ini to set FGType=nukems
+            # Modify OptiScaler.ini to set FGType=nukems and Fsr4Update=true
             ini_file = extract_path / "OptiScaler.ini"
             self._modify_optiscaler_ini(ini_file)
             
