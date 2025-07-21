@@ -17,11 +17,32 @@ export const STYLES = {
     padding: '12px',
     marginTop: '16px',
     backgroundColor: 'var(--decky-selected-ui-bg)',
-    borderRadius: '4px'
+    borderRadius: '8px',
+    border: '1px solid var(--decky-border-color)',
+    fontSize: '14px'
   },
-  statusSuccess: { color: "green" },
-  statusError: { color: "red" },
-  preWrap: { whiteSpace: "pre-wrap" as const }
+  statusInstalled: { 
+    color: '#22c55e',
+    fontWeight: 'bold',
+    fontSize: '14px'
+  },
+  statusNotInstalled: { 
+    color: '#f97316',
+    fontWeight: 'bold',
+    fontSize: '14px'
+  },
+  statusSuccess: { color: "#22c55e" },
+  statusError: { color: "#ef4444" },
+  preWrap: { whiteSpace: "pre-wrap" as const },
+  instructionCard: {
+    padding: '14px',
+    backgroundColor: 'var(--decky-selected-ui-bg)',
+    borderRadius: '8px',
+    border: '1px solid var(--decky-border-color)',
+    marginTop: '8px',
+    fontSize: '13px',
+    lineHeight: '1.4'
+  }
 };
 
 // Common timeout values
@@ -32,11 +53,14 @@ export const TIMEOUTS = {
 
 // Message strings
 export const MESSAGES = {
-  modInstalled: "OptiScaler Mod Is Installed",
-  modNotInstalled: "OptiScaler Mod Not Installed",
-  installing: "Installing...",
+  modInstalled: "✅ OptiScaler Mod Installed",
+  modNotInstalled: "❌ OptiScaler Mod Not Installed",
+  installing: "Installing OptiScaler...",
   installButton: "Install OptiScaler FG Mod",
-  uninstalling: "Uninstalling...",
+  uninstalling: "Removing OptiScaler...",
   uninstallButton: "Uninstall OptiScaler FG Mod",
-  instructionText: "Install the OptiScaler-based mod above, then select and patch a game below to enable DLSS replacement with FSR Frame Generation. Map a button to \"insert\" key to bring up the OptiScaler menu in-game."
+  installSuccess: "✅ OptiScaler mod installed successfully!",
+  uninstallSuccess: "✅ OptiScaler mod removed successfully.",
+  instructionTitle: "How to Use:",
+  instructionText: "Select and patch a game below to enable frame generation (or use clipboard button to copy and paste into launch options)\n\nIn-game: Enable DLSS in graphics settings, or assign a back button to keyboard's 'Insert' key for extended OptiScaler options"
 };

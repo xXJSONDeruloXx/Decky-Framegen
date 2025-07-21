@@ -3,7 +3,7 @@ import { PanelSection, PanelSectionRow, ButtonItem } from "@decky/ui";
 import { checkFGModPath, runInstallFGMod, runUninstallFGMod } from "../api";
 import { ResultDisplay, OperationResult } from "./ResultDisplay";
 import { createAutoCleanupTimer, safeAsyncOperation } from "../utils";
-import { TIMEOUTS, MESSAGES } from "../utils/constants";
+import { TIMEOUTS, MESSAGES, STYLES } from "../utils/constants";
 
 export function FGModInstallerSection() {
   const [installing, setInstalling] = useState(false);
@@ -68,8 +68,10 @@ export function FGModInstallerSection() {
     <PanelSection>
       {pathExists !== null ? (
         <PanelSectionRow>
-          <div style={{ color: pathExists ? "green" : "red" }}>
-            {pathExists ? MESSAGES.modInstalled : MESSAGES.modNotInstalled}
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <div style={pathExists ? STYLES.statusInstalled : STYLES.statusNotInstalled}>
+              {pathExists ? MESSAGES.modInstalled : MESSAGES.modNotInstalled}
+            </div>
           </div>
         </PanelSectionRow>
       ) : null}
@@ -93,11 +95,18 @@ export function FGModInstallerSection() {
       <ResultDisplay result={installResult} />
       <ResultDisplay result={uninstallResult} />
       
-      <PanelSectionRow>
-        <div>
-          {MESSAGES.instructionText}
-        </div>
-      </PanelSectionRow>
+      {pathExists === true ? (
+        <PanelSectionRow>
+          <div style={STYLES.instructionCard}>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', color: 'var(--decky-accent-text)' }}>
+              {MESSAGES.instructionTitle}
+            </div>
+            <div style={{ whiteSpace: 'pre-line' }}>
+              {MESSAGES.instructionText}
+            </div>
+          </div>
+        </PanelSectionRow>
+      ) : null}
     </PanelSection>
   );
 }

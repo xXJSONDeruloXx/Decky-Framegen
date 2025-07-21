@@ -40,19 +40,19 @@ export function InstalledGamesSection() {
     // Show confirmation modal
     showModal(
       <ConfirmModal 
-        strTitle={`Patch ${selectedGame.name}?`}
+        strTitle={`Enable Frame Generation for ${selectedGame.name}?`}
         strDescription={
-          "WARNING: Decky Framegen does not unpatch games when uninstalled. Be sure to unpatch the game or verify the integrity of your game files if you choose to uninstall the plugin or the game has issues."
+          "⚠️ Important: This plugin does not automatically unpatch games when uninstalled. If you uninstall this plugin or experience game issues, use the 'Disable Frame Generation' option or verify game file integrity through Steam."
         }
-        strOKButtonText="Yeah man, I wanna do it"
+        strOKButtonText="Enable Frame Generation"
         strCancelButtonText="Cancel"
         onOK={async () => {
           try {
             await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
-            setResult(`Launch options set for ${selectedGame.name}. You can now select DLSS in the game's menu, and access OptiScaler with Insert key.`);
+            setResult(`✓ Frame generation enabled for ${selectedGame.name}. Launch the game, enable DLSS in graphics settings, then press Insert to access OptiScaler options.`);
           } catch (error) {
             logError('handlePatchClick: ' + String(error));
-            setResult(error instanceof Error ? `Error setting launch options: ${error.message}` : 'Error setting launch options');
+            setResult(error instanceof Error ? `Error: ${error.message}` : 'Error enabling frame generation');
           }
         }}
       />
@@ -64,15 +64,15 @@ export function InstalledGamesSection() {
 
     try {
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
-      setResult(`OptiScaler will uninstall on next launch of ${selectedGame.name}.`);
+      setResult(`✓ Frame generation will be disabled on next launch of ${selectedGame.name}.`);
     } catch (error) {
       logError('handleUnpatchClick: ' + String(error));
-      setResult(error instanceof Error ? `Error clearing launch options: ${error.message}` : 'Error clearing launch options');
+      setResult(error instanceof Error ? `Error: ${error.message}` : 'Error disabling frame generation');
     }
   };
 
   return (
-    <PanelSection title="Select a game to patch:">
+    <PanelSection title="Select a Game to Patch:">
       <PanelSectionRow>
         <DropdownItem
           rgOptions={games.map(game => ({
@@ -85,15 +85,18 @@ export function InstalledGamesSection() {
             setSelectedGame(game || null);
             setResult('');
           }}
-          strDefaultLabel="Select a game..."
+          strDefaultLabel="Choose a game"
           menuLabel="Installed Games"
         />
       </PanelSectionRow>
 
       {result ? (
         <PanelSectionRow>
-          <div style={STYLES.resultBox}>
-            {result}
+          <div style={{
+            ...STYLES.preWrap,
+            ...(result.includes('Error') ? STYLES.statusNotInstalled : STYLES.statusInstalled)
+          }}>
+            {result.includes('Error') ? '❌' : '✅'} {result}
           </div>
         </PanelSectionRow>
       ) : null}
@@ -105,7 +108,7 @@ export function InstalledGamesSection() {
               layout="below"
               onClick={handlePatchClick}
             >
-              Patch
+              Enable Frame Generation
             </ButtonItem>
           </PanelSectionRow>
           <PanelSectionRow>
@@ -113,7 +116,7 @@ export function InstalledGamesSection() {
               layout="below"
               onClick={handleUnpatchClick}
             >
-              Unpatch
+              Disable Frame Generation
             </ButtonItem>
           </PanelSectionRow>
         </>
