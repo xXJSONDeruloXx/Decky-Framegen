@@ -64,10 +64,10 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
 
   return (
     <PanelSection>
-      {pathExists !== null ? (
+      {pathExists === false ? (
         <PanelSectionRow>
-          <div style={pathExists ? STYLES.statusInstalled : STYLES.statusNotInstalled}>
-            {pathExists ? MESSAGES.modInstalled : MESSAGES.modNotInstalled}
+          <div style={STYLES.statusNotInstalled}>
+            {MESSAGES.modNotInstalled}
           </div>
         </PanelSectionRow>
       ) : null}
