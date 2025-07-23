@@ -104,7 +104,6 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
         <SmartClipboardButton 
           command="~/fgmod/fgmod %command%"
           buttonText="Copy Patch Command"
-          successMessage="Patch command ready to paste"
         />
       ) : null}
       
@@ -112,7 +111,6 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
         <SmartClipboardButton 
           command="~/fgmod/fgmod-uninstaller.sh %command%"
           buttonText="Copy Unpatch Command"
-          successMessage="Unpatch command ready to paste"
         />
       ) : null}
     </PanelSection>
