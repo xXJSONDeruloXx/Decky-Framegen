@@ -77,12 +77,12 @@ class Plugin:
                 updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
                 
                 # Replace Fsr4Update=auto with Fsr4Update=true
-                updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
+                # updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
                 
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
                 
-                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems and Fsr4Update=true")
+                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems")
                 return True
             else:
                 decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
