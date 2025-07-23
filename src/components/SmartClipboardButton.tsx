@@ -1,31 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PanelSectionRow, ButtonItem } from "@decky/ui";
-import { FaClipboard } from "react-icons/fa";
+import { FaClipboard, FaCheck } from "react-icons/fa";
 import { toaster } from "@decky/api";
 
 interface SmartClipboardButtonProps {
   command?: string;
   buttonText?: string;
-  successMessage?: string;
 }
 
 export function SmartClipboardButton({ 
   command = "~/fgmod/fgmod %command%",
-  buttonText = "Copy Launch Command",
-  successMessage = "Launch option ready to paste"
+  buttonText = "Copy Launch Command"
 }: SmartClipboardButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const getLaunchOptionText = (): string => {
-    return command;
-  };
+  // Reset success state after 3 seconds
+  useEffect(() => {
+    if (showSuccess) {
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [showSuccess]);
 
   const copyToClipboard = async () => {
-    if (isLoading) return;
+    if (isLoading || showSuccess) return;
     
     setIsLoading(true);
     try {
-      const text = getLaunchOptionText();
+      const text = command;
       
       // Use the proven input simulation method
       const tempInput = document.createElement('input');
@@ -58,27 +64,18 @@ export function SmartClipboardButton({
       document.body.removeChild(tempInput);
       
       if (copySuccess) {
+        // Show success feedback in the button instead of toast
+        setShowSuccess(true);
         // Verify the copy worked by reading back
         try {
           const readBack = await navigator.clipboard.readText();
-          if (readBack === text) {
-            toaster.toast({
-              title: "Copied to Clipboard!",
-              body: successMessage
-            });
-          } else {
-            // Copy worked but verification failed - still consider it success
-            toaster.toast({
-              title: "Copied to Clipboard!",
-              body: "Launch option copied (verification unavailable)"
-            });
+          if (readBack !== text) {
+            // Copy worked but verification failed - still show success
+            console.log('Copy verification failed but copy likely worked');
           }
         } catch (e) {
           // Verification failed but copy likely worked
-          toaster.toast({
-            title: "Copied to Clipboard!",
-            body: "Launch option copied successfully"
-          });
+          console.log('Copy verification unavailable but copy likely worked');
         }
       } else {
         toaster.toast({
@@ -102,10 +99,14 @@ export function SmartClipboardButton({
       <ButtonItem
         layout="below"
         onClick={copyToClipboard}
-        disabled={isLoading}
+        disabled={isLoading || showSuccess}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {isLoading ? (
+          {showSuccess ? (
+            <FaCheck style={{ 
+              color: "#4CAF50" // Green color for success
+            }} />
+          ) : isLoading ? (
             <FaClipboard style={{ 
               animation: "pulse 1s ease-in-out infinite",
               opacity: 0.7 
@@ -113,7 +114,12 @@ export function SmartClipboardButton({
           ) : (
             <FaClipboard />
           )}
-          <div>{isLoading ? "Copying..." : buttonText}</div>
+          <div style={{ 
+            color: showSuccess ? "#4CAF50" : "inherit",
+            fontWeight: showSuccess ? "bold" : "normal"
+          }}>
+            {showSuccess ? "Copied to clipboard" : isLoading ? "Copying..." : buttonText}
+          </div>
         </div>
       </ButtonItem>
       <style>{`

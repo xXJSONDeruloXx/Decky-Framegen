@@ -5,6 +5,7 @@ import { OperationResult } from "./ResultDisplay";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { createAutoCleanupTimer } from "../utils";
 import { TIMEOUTS, MESSAGES, STYLES } from "../utils/constants";
+import optiScalerImage from "../../assets/optiscaler.png";
 
 interface FGModInstallerSectionProps {
   pathExists: boolean | null;
@@ -63,10 +64,10 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
 
   return (
     <PanelSection>
-      {pathExists !== null ? (
+      {pathExists === false ? (
         <PanelSectionRow>
-          <div style={pathExists ? STYLES.statusInstalled : STYLES.statusNotInstalled}>
-            {pathExists ? MESSAGES.modInstalled : MESSAGES.modNotInstalled}
+          <div style={STYLES.statusNotInstalled}>
+            {MESSAGES.modNotInstalled}
           </div>
         </PanelSectionRow>
       ) : null}
@@ -89,6 +90,26 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
       
       {pathExists === true ? (
         <PanelSectionRow>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginBottom: '16px' 
+          }}>
+            <img 
+              src={optiScalerImage} 
+              alt="OptiScaler" 
+              style={{ 
+                maxWidth: '100%', 
+                height: 'auto',
+                borderRadius: '8px'
+              }} 
+            />
+          </div>
+        </PanelSectionRow>
+      ) : null}
+      
+      {pathExists === true ? (
+        <PanelSectionRow>
           <div style={STYLES.instructionCard}>
             <div style={{ fontWeight: 'bold', marginBottom: '8px', color: 'var(--decky-accent-text)' }}>
               {MESSAGES.instructionTitle}
@@ -104,7 +125,6 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
         <SmartClipboardButton 
           command="~/fgmod/fgmod %command%"
           buttonText="Copy Patch Command"
-          successMessage="Patch command ready to paste"
         />
       ) : null}
       
@@ -112,7 +132,6 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
         <SmartClipboardButton 
           command="~/fgmod/fgmod-uninstaller.sh %command%"
           buttonText="Copy Unpatch Command"
-          successMessage="Unpatch command ready to paste"
         />
       ) : null}
     </PanelSection>

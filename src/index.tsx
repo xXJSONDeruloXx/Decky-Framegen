@@ -1,8 +1,8 @@
 import { definePlugin } from "@decky/api";
-import { RiAiGenerate } from "react-icons/ri";
+import { MdOutlineAutoAwesomeMotion } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { FGModInstallerSection } from "./components/FGModInstallerSection";
-import { InstalledGamesSection } from "./components/InstalledGamesSection";
+// import { InstalledGamesSection } from "./components/InstalledGamesSection";
 import { DocumentationButton } from "./components/DocumentationButton";
 import { checkFGModPath } from "./api";
 import { safeAsyncOperation } from "./utils";
@@ -43,7 +43,7 @@ export default definePlugin(() => ({
   titleView: <div>Decky Framegen</div>,
   alwaysRender: true,
   content: <MainContent />,
-  icon: <RiAiGenerate />,
+  icon: <MdOutlineAutoAwesomeMotion />,
   onDismount() {
     console.log("Framegen Plugin unmounted");
   },
