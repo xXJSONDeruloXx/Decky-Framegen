@@ -1,5 +1,8 @@
 # Decky Framegen Plugin
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B71HZTAX)
+
+
 This plugin swaps DLSS with FSR to enable upscaling and frame generation in games without built-in FSR support.
 
 ## Features
