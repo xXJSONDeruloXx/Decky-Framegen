@@ -12,7 +12,7 @@ This plugin swaps DLSS with FSR to enable upscaling and frame generation in game
 
 - Nukem9 for the DLSS to FSR3 mod: https://github.com/Nukem9/dlssg-to-fsr3
 
-- Cdozdil for Optiscaler: https://github.com/cdozdil/OptiScaler
+- Cdozdil for Optiscaler: https://github.com/optiscaler/OptiScaler
 
 - FakeMichau for various tools leveraged in this script, including fgmod, innoextract and fakenvapi: https://github.com/FakeMichau
 
