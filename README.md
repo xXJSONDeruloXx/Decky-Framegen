@@ -8,6 +8,10 @@ This plugin swaps DLSS with FSR to enable upscaling and frame generation in game
 - Check if Framegen mod path exists
 - Add launch option to the running game to enable the patch
 
+## More information
+- [Wiki](https://github.com/xXJSONDeruloXx/Decky-Framegen/wiki)
+- [Documentation](/documentation/documentation-home.md)
+
 ## Credits
 
 - Nukem9 for the DLSS to FSR3 mod: https://github.com/Nukem9/dlssg-to-fsr3
