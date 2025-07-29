@@ -3,7 +3,6 @@ import { MdOutlineAutoAwesomeMotion } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { FGModInstallerSection } from "./components/FGModInstallerSection";
 // import { InstalledGamesSection } from "./components/InstalledGamesSection";
-import { DocumentationButton } from "./components/DocumentationButton";
 import { checkFGModPath } from "./api";
 import { safeAsyncOperation } from "./utils";
 import { TIMEOUTS } from "./utils/constants";
@@ -31,7 +30,6 @@ function MainContent() {
       {pathExists === true ? (
         <>
           {/* <InstalledGamesSection /> */}
-          <DocumentationButton />
         </>
       ) : null}
     </>

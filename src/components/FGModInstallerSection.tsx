@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { PanelSection, PanelSectionRow, ButtonItem } from "@decky/ui";
+import { FaBook } from "react-icons/fa";
 import { runInstallFGMod, runUninstallFGMod } from "../api";
 import { OperationResult } from "./ResultDisplay";
 import { SmartClipboardButton } from "./SmartClipboardButton";
@@ -82,14 +83,6 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
       
       {pathExists === true ? (
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={handleUninstallClick} disabled={uninstalling}>
-            {uninstalling ? MESSAGES.uninstalling : MESSAGES.uninstallButton}
-          </ButtonItem>
-        </PanelSectionRow>
-      ) : null}
-      
-      {pathExists === true ? (
-        <PanelSectionRow>
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -109,6 +102,20 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
       ) : null}
       
       {pathExists === true ? (
+        <SmartClipboardButton 
+          command="~/fgmod/fgmod %command%"
+          buttonText="Copy Patch Command"
+        />
+      ) : null}
+      
+      {pathExists === true ? (
+        <SmartClipboardButton 
+          command="~/fgmod/fgmod-uninstaller.sh %command%"
+          buttonText="Copy Unpatch Command"
+        />
+      ) : null}
+      
+      {pathExists === true ? (
         <PanelSectionRow>
           <div style={STYLES.instructionCard}>
             <div style={{ fontWeight: 'bold', marginBottom: '8px', color: 'var(--decky-accent-text)' }}>
@@ -122,17 +129,25 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
       ) : null}
       
       {pathExists === true ? (
-        <SmartClipboardButton 
-          command="~/fgmod/fgmod %command%"
-          buttonText="Copy Patch Command"
-        />
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={() => window.open("https://github.com/optiscaler/OptiScaler/wiki", "_blank")}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <FaBook />
+              <div>OptiScaler Wiki</div>
+            </div>
+          </ButtonItem>
+        </PanelSectionRow>
       ) : null}
       
       {pathExists === true ? (
-        <SmartClipboardButton 
-          command="~/fgmod/fgmod-uninstaller.sh %command%"
-          buttonText="Copy Unpatch Command"
-        />
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={handleUninstallClick} disabled={uninstalling}>
+            {uninstalling ? MESSAGES.uninstalling : MESSAGES.uninstallButton}
+          </ButtonItem>
+        </PanelSectionRow>
       ) : null}
     </PanelSection>
   );
