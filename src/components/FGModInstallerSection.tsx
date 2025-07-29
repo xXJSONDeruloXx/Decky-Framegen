@@ -144,8 +144,17 @@ export function FGModInstallerSection({ pathExists, setPathExists }: FGModInstal
       
       {pathExists === true ? (
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={handleUninstallClick} disabled={uninstalling}>
-            {uninstalling ? MESSAGES.uninstalling : MESSAGES.uninstallButton}
+          <ButtonItem 
+            layout="below" 
+            onClick={handleUninstallClick} 
+            disabled={uninstalling}
+          >
+            <div style={{ 
+              color: '#ef4444',
+              fontWeight: 'bold'
+            }}>
+              {uninstalling ? MESSAGES.uninstalling : MESSAGES.uninstallButton}
+            </div>
           </ButtonItem>
         </PanelSectionRow>
       ) : null}
