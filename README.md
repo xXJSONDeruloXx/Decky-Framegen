@@ -10,7 +10,6 @@ This plugin swaps DLSS with FSR to enable upscaling and frame generation in game
 
 ## More information
 - [Wiki](https://github.com/xXJSONDeruloXx/Decky-Framegen/wiki)
-- [Documentation](/documentation/documentation-home.md)
 
 ## Credits
 
