@@ -1,5 +1,5 @@
 // Re-export components
-export { FGModInstallerSection } from './components/FGModInstallerSection';
+export { OptiScalerControls } from './components';
 export { InstalledGamesSection } from './components/InstalledGamesSection';
 export { ResultDisplay } from './components/ResultDisplay';
 

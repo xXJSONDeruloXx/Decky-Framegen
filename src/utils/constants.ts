@@ -62,5 +62,5 @@ export const MESSAGES = {
   installSuccess: "✅ OptiScaler mod setup successfully!",
   uninstallSuccess: "✅ OptiScaler mod removed successfully.",
   instructionTitle: "How to Use:",
-  instructionText: "Click 'Copy Patch Command' or 'Copy Unpatch Command', then go to your game's properties, and paste the command into the Launch Options field.\n\nIn-game: Enable DLSS in graphics settings, or assign a back button to keyboard's 'Insert' key for extended OptiScaler options."
+  instructionText: "Click 'Copy Patch Command' or 'Copy Unpatch Command', then go to your game's properties, and paste the command into the Launch Options field.\n\nIn-game: Enable DLSS in graphics settings to unlock FSR 3.1/XeSS 2.0 in DirectX12 Games.\n\nFor extended OptiScaler options, assign a back button to a keyboard's 'Insert' key."
 };
