@@ -1,7 +1,7 @@
 import { definePlugin } from "@decky/api";
 import { MdOutlineAutoAwesomeMotion } from "react-icons/md";
 import { useState, useEffect } from "react";
-import { FGModInstallerSection } from "./components/FGModInstallerSection";
+import { OptiScalerControls } from "./components";
 // import { InstalledGamesSection } from "./components/InstalledGamesSection";
 import { checkFGModPath } from "./api";
 import { safeAsyncOperation } from "./utils";
@@ -26,7 +26,7 @@ function MainContent() {
 
   return (
     <>
-      <FGModInstallerSection pathExists={pathExists} setPathExists={setPathExists} />
+      <OptiScalerControls pathExists={pathExists} setPathExists={setPathExists} />
       {pathExists === true ? (
         <>
           {/* <InstalledGamesSection /> */}
@@ -37,12 +37,12 @@ function MainContent() {
 }
 
 export default definePlugin(() => ({
-  name: "Framegen Plugin",
+  name: "Decky Framegen",
   titleView: <div>Decky Framegen</div>,
   alwaysRender: true,
   content: <MainContent />,
   icon: <MdOutlineAutoAwesomeMotion />,
   onDismount() {
-    console.log("Framegen Plugin unmounted");
+    console.log("Decky Framegen Plugin unmounted");
   },
 }));
