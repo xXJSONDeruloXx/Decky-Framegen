@@ -94,12 +94,17 @@ class Plugin:
     def _setup_flatpak_compatibility(self, fgmod_path):
         """Set up Flatpak compatibility if needed"""
         try:
+            # Create a clean environment to avoid PyInstaller issues
+            clean_env = os.environ.copy()
+            clean_env["LD_LIBRARY_PATH"] = ""
+            
             # Check if Flatpak Steam is installed
             flatpak_check = subprocess.run(
                 ["flatpak", "list"],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
+                env=clean_env
             )
             
             if flatpak_check.returncode == 0 and "com.valvesoftware.Steam" in flatpak_check.stdout:
@@ -109,7 +114,7 @@ class Plugin:
                     "flatpak", "override", "--user", 
                     f"--filesystem={fgmod_path}", 
                     "com.valvesoftware.Steam"
-                ], check=False)
+                ], check=False, env=clean_env)
                 
                 decky.logger.info("Added Flatpak filesystem access")
                 return True
@@ -153,11 +158,16 @@ class Plugin:
                 str(optiscaler_archive)
             ]
             
+            # Create a clean environment to avoid PyInstaller issues
+            clean_env = os.environ.copy()
+            clean_env["LD_LIBRARY_PATH"] = ""
+            
             extract_result = subprocess.run(
                 extract_cmd,
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
+                env=clean_env
             )
             
             if extract_result.returncode != 0:
