@@ -1,32 +1,61 @@
 # Decky Framegen Plugin
 
-This plugin swaps DLSS with FSR to enable upscaling and frame generation in games without built-in FSR support.
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B71HZTAX)
 
-## Features
-
-- Install and uninstall Framegen mod
-- Check if Framegen mod path exists
-- Add launch option to the running game to enable the patch
+## What This Plugin Does
+A Steam Deck plugin that enables DLSS upscaling and Frame Generation on handhelds by utilizing the latest OptiScaler and supporting modification software. This plugin automatically installs and manages all necessary components for FSR-based frame generation in games that support DLSS, or OptiFG for adding FG to games that do not have any existing FG pathway (highly experimental)
 
 ## More information
 - [Wiki](https://github.com/xXJSONDeruloXx/Decky-Framegen/wiki)
 
+## Features
+This plugin uses OptiScaler to replace DLSS calls with FSR3/FSR3.1, giving you:
+- **Frame Generation**: Doubles your frame rate using AMD's FSR3 pathways
+- **Upscaling**: Improves performance while maintaining visual quality using FSR and XESS using DLSS FSR or XESS inputs. Upgrade FSR 2 games to FSR 3.1.4 or XESS for better visual quality.
+- **Easy Management**: One-click installation and game patching/unpatching through the Steam Deck interface. No going into desktop mode every time you want to add or remove OptiScaler from a game!
+
+
+### Core Functionality
+- **One-Click Setup**: Automatically downloads and installs OptiScaler into a "fgmod" directory
+- **Smart Installation**: Handles all required dependencies and library files
+- **Game Patching**: Easy copy-paste launch commands for enabling/disabling the mod per game
+- **OptiScaler Wiki**: Direct access to OptiScaler documentation and settings via a webpage launch button right inside the plugin.
+
+## How to Use
+1. **Install the Plugin**: Download and install through Decky Loader "install from zip" option in developer settings
+2. **Setup OptiScaler**: Open the plugin and click "Setup OptiScaler Mod" 
+3. **Configure Games**: For each game you want to enhance:
+   - Click "Copy Patch Command" in the plugin
+   - Go to your game's Properties → Launch Options in Steam
+   - Paste the command: `~/fgmod/fgmod %command%`
+4. **Enable Features**: Launch your game and enable DLSS in the graphics settings
+5. **Advanced Options**: Press the Insert key in-game for additional OptiScaler settings
+
+### Removing the Mod from Games
+- Click "Copy Unpatch Command" and replace the launch options with: `~/fgmod/fgmod-uninstaller.sh %command%`
+- Run the game at least once to make the uninstaller script run. After you can leave the launch option or remove it
+
+## Technical Details
+
+### What's Included
+- **OptiScaler_v0.7.7-pre12_20250702+**: Latest bleeding-edge build (as of writing), with new features such as OptiFG for adding FG to games without any FG (highly experimental)
+- **Nukem9's DLSSG to FSR3 mod**: Allows use of DLSS inputs for FSR frame gen outputs, and xess or FSR upscaling outputs
+- **FakeNVAPI**: NVIDIA API emulation for AMD/Intel GPUs, to make DLSS options selectable in game
+- **Supporting Libraries**: All required DX12/Vulkan libraries (libxess.dll, amd_fidelityfx, etc.)
+
 ## Credits
 
-- Nukem9 for the DLSS to FSR3 mod: https://github.com/Nukem9/dlssg-to-fsr3
+### Core Technologies
+- **[Nukem9](https://github.com/Nukem9/dlssg-to-fsr3)** - Creator of the DLSS to FSR3 mod that makes frame generation possible
+- **[Cdozdil/OptiScaler Team](https://github.com/optiscaler/OptiScaler)** - OptiScaler mod that provides the core functionality and bleeding-edge improvements
+- **[Artur Graniszewski](https://github.com/artur-graniszewski/DLSS-Enabler)** - DLSS Enabler that allows DLSS features on non-RTX hardware
+- **[FakeMichau](https://github.com/FakeMichau)** - Various essential tools including fgmod scripts, innoextract, and fakenvapi for AMD/Intel GPU support
 
-- Cdozdil for Optiscaler: https://github.com/optiscaler/OptiScaler
+### Community & Documentation
+- **[Deck Wizard](https://www.youtube.com/watch?v=o_TkF-Eiq3M)** - Excellent tutorial and demo video for the plugin beta
+- **[Grown Up Gaming](https://www.youtube.com/watch?v=fGgc2CY6occ)** - Early tutorial for the plugin beta version
+- **[Steam Deck In Hand](https://www.youtube.com/watch?v=vAuOUY8IyHE)** - Comprehensive tutorial and showcase video
+- **The DLSS2FSR Community** - Ongoing support and guidance for understanding the various mods and tools
 
-- FakeMichau for various tools leveraged in this script, including fgmod, innoextract and fakenvapi: https://github.com/FakeMichau
 
-- Artur Graniszewski for DLSS Enabler: https://github.com/artur-graniszewski/DLSS-Enabler 
 
-- Deck Wizard for making an awesome tutorial & demo video for the plugin beta here: https://www.youtube.com/watch?v=o_TkF-Eiq3M 
-
-- Grown Up Gaming for creating a very early tutorial for the plugin beta here: https://www.youtube.com/watch?v=fGgc2CY6occ
-
-- Steam Deck In Hand for making an awesome tutorial and showcase here: https://www.youtube.com/watch?v=vAuOUY8IyHE
-
-- Davide Guidotti for his contributions to the plugin code: https://github.com/DGdev91
-
-- the DLSS2FSR community for helping me get my head around all these tools and mods!
