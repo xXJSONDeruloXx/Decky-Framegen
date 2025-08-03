@@ -1,5 +1,5 @@
 import { PanelSectionRow } from "@decky/ui";
-import optiScalerImage from "../../assets/optiscaler.png";
+import optiScalerImage from "../../assets/header-banner.png";
 
 interface OptiScalerHeaderProps {
   pathExists: boolean | null;
