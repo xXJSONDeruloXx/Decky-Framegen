@@ -1,7 +1,7 @@
 {
   "name": "decky-framegen",
   "version": "0.11.9",
-  "description": "plugin to install OptiScaler bleeding-edge and enable upscaling and framegen in a large variety of games.",
+  "description": "This plugin installs and manages OptiScaler, a tool that enhances upscaling and enables frame generation in a range of DirectX 12 games.",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
