@@ -53,7 +53,6 @@ This plugin uses OptiScaler to replace DLSS calls with FSR3/FSR3.1, giving you:
 - **[FakeMichau](https://github.com/FakeMichau)** - Various essential tools including fgmod scripts, innoextract, and fakenvapi for AMD/Intel GPU support
 
 ### Community & Documentation
-- **[Deck Wizard](https://www.youtube.com/watch?v=o_TkF-Eiq3M)** - Excellent tutorial and demo video for the plugin beta
-- **[Grown Up Gaming](https://www.youtube.com/watch?v=fGgc2CY6occ)** - Early tutorial for the plugin beta version
-- **[Steam Deck In Hand](https://www.youtube.com/watch?v=vAuOUY8IyHE)** - Comprehensive tutorial and showcase video
+- **[Deck Wizard](https://www.youtube.com/watch?v=o_TkF-Eiq3M)** - Extensive community support including comprehensive guides, promotional content, thorough testing and feedback, custom artworks, and tutorial videos. His passionate advocacy and continuous support have been instrumental in Decky Framegen's success.
+
 - **The DLSS2FSR Community** - Ongoing support and guidance for understanding the various mods and tools
