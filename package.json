@@ -53,10 +53,10 @@
   "remote_binary": 
   [
     {
-        "sha256hash": "39c58751633ca9e08d5fce3c00c1a8f9b1e91ece9d2d90a58182d16c5a3a97c3",
-        "name": "BUNDLED_OptiScaler_v0.7.7-pre12_20250702.7z",
-        "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.7-pre12_20250702_unsigned_dll-20250721-033539/BUNDLED_OptiScaler_v0.7.7-pre12_20250702.7z",
-        "size": 60721676
+        "sha256hash": "5541e69280ca6f5e4f8f57e07544231c16f0f37d83c56b08484ebeb626f3767a",
+        "name": "BUNDLE_OptiScaler_v0.7.7-pre13_20250731-20250804-002946.7z",
+        "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/BUNDLE_OptiScaler_v0.7.7-pre13_20250731-20250804-002946/BUNDLE_OptiScaler_v0.7.7-pre13_20250731-20250804-002946.7z",
+        "size": 61144853
     }
   ]
 }
