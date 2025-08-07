@@ -90,39 +90,6 @@ class Plugin:
         except Exception as e:
             decky.logger.error(f"Failed to modify OptiScaler.ini: {e}")
             return False
-    
-    def _setup_flatpak_compatibility(self, fgmod_path):
-        """Set up Flatpak compatibility if needed"""
-        try:
-            # Create a clean environment to avoid PyInstaller issues
-            clean_env = os.environ.copy()
-            clean_env["LD_LIBRARY_PATH"] = ""
-            
-            # Check if Flatpak Steam is installed
-            flatpak_check = subprocess.run(
-                ["flatpak", "list"],
-                capture_output=True,
-                text=True,
-                check=False,
-                env=clean_env
-            )
-            
-            if flatpak_check.returncode == 0 and "com.valvesoftware.Steam" in flatpak_check.stdout:
-                decky.logger.info("Flatpak Steam detected, adding filesystem access")
-                
-                subprocess.run([
-                    "flatpak", "override", "--user", 
-                    f"--filesystem={fgmod_path}", 
-                    "com.valvesoftware.Steam"
-                ], check=False, env=clean_env)
-                
-                decky.logger.info("Added Flatpak filesystem access")
-                return True
-            
-            return False
-        except Exception as e:
-            decky.logger.warning(f"Flatpak setup had issues (this is OK): {e}")
-            return False
 
     async def extract_static_optiscaler(self) -> dict:
         """Extract OptiScaler from the plugin's bin directory."""
@@ -254,10 +221,6 @@ class Plugin:
                     "status": "error",
                     "message": f"OptiScaler extraction failed: {extract_result.get('message', 'Unknown error')}"
                 }
-            
-            # Handle Flatpak compatibility
-            fgmod_path = Path(decky.HOME) / "fgmod"
-            self._setup_flatpak_compatibility(fgmod_path)
             
             return {
                 "status": "success",

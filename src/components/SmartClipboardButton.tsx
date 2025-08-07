@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PanelSectionRow, ButtonItem } from "@decky/ui";
+import { PanelSectionRow, ButtonItem, ConfirmModal, showModal } from "@decky/ui";
 import { FaClipboard, FaCheck } from "react-icons/fa";
 import { toaster } from "@decky/api";
 
@@ -27,6 +27,32 @@ export function SmartClipboardButton({
   }, [showSuccess]);
 
   const copyToClipboard = async () => {
+    if (isLoading || showSuccess) return;
+    
+    const isPatchCommand = command.includes("fgmod %command%") && !command.includes("uninstaller");
+    
+    if (isPatchCommand) {
+      showModal(
+        <ConfirmModal 
+          strTitle={`Patch Game with OptiScaler?`}
+          strDescription={
+            "WARNING: Decky Framegen does not unpatch games when uninstalled. Be sure to unpatch the game or run the OptiScaler uninstall script inside the game files if you choose to uninstall the plugin or the game has issues."
+          }
+          strOKButtonText="Copy Patch Command"
+          strCancelButtonText="Cancel"
+          onOK={async () => {
+            await performCopy();
+          }}
+        />
+      );
+      return;
+    }
+    
+    // For non-patch commands, copy directly
+    await performCopy();
+  };
+
+  const performCopy = async () => {
     if (isLoading || showSuccess) return;
     
     setIsLoading(true);
