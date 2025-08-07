@@ -8,7 +8,7 @@ A Steam Deck plugin that enables DLSS upscaling and Frame Generation on handheld
 
 This plugin uses OptiScaler to replace DLSS calls with FSR3/FSR3.1, giving you:
 
-- **Frame Generation**: Doubles your frame rate using AMD's FSR3 pathways
+- **Frame Generation**: Smooth out your frame rate using AMD's FSR3 pathways
 - **Upscaling**: Improves performance while maintaining visual quality using FSR and XESS using DLSS FSR or XESS inputs. Upgrade FSR 2 games to FSR 3.1.4 or XESS for better visual quality.
 - **Easy Management**: One-click installation and game patching/unpatching through the Steam Deck interface. No going into desktop mode every time you want to add or remove OptiScaler from a game!
 
