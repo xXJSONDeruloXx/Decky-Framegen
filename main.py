@@ -173,6 +173,26 @@ class Plugin:
             ini_file = extract_path / "OptiScaler.ini"
             self._modify_optiscaler_ini(ini_file)
             
+            # After extraction, replace XeSS DLLs with newer versions from remote binaries (if available)
+            try:
+                newer_libxess = bin_path / "libxess.dll"
+                newer_libxess_dx11 = bin_path / "libxess_dx11.dll"
+                replaced = []
+                if newer_libxess.exists():
+                    shutil.copy2(newer_libxess, extract_path / "libxess.dll")
+                    replaced.append("libxess.dll")
+                else:
+                    decky.logger.warning(f"Newer libxess.dll not found at {newer_libxess}")
+                if newer_libxess_dx11.exists():
+                    shutil.copy2(newer_libxess_dx11, extract_path / "libxess_dx11.dll")
+                    replaced.append("libxess_dx11.dll")
+                else:
+                    decky.logger.warning(f"Newer libxess_dx11.dll not found at {newer_libxess_dx11}")
+                if replaced:
+                    decky.logger.info(f"Replaced XeSS DLLs with newer versions: {', '.join(replaced)}")
+            except Exception as e:
+                decky.logger.error(f"Failed to replace XeSS DLLs: {e}")
+            
             return {
                 "status": "success",
                 "message": f"Successfully extracted OptiScaler {version} to ~/fgmod",
