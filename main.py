@@ -238,6 +238,7 @@ class Plugin:
         path = Path(decky.HOME) / "fgmod"
         required_files = [
             "OptiScaler.dll",
+            "OptiScaler.ini",
             "dlssg_to_fsr3_amd_is_better.dll", 
             "fakenvapi.ini", 
             "nvapi64.dll",
@@ -245,6 +246,11 @@ class Plugin:
             "amd_fidelityfx_dx12.dll",
             "amd_fidelityfx_vk.dll", 
             "libxess.dll",
+            "libxess_dx11.dll",
+            "libxess_fg.dll",
+            "libxell.dll",
+            "nvngx.dll",
+            "D3D12_Optiscaler/D3D12Core.dll",
             "fgmod",
             "fgmod-uninstaller.sh"
         ]

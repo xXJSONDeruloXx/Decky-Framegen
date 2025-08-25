@@ -60,10 +60,10 @@ logger -t fgmod "🧩 Using DLL name: $dll_name"
 logger -t fgmod "📄 Preserve INI: $preserve_ini"
 
 # === Cleanup Old Injectors ===
-rm -f "$exe_folder_path"/{dxgi.dll,winmm.dll,nvngx.dll,_nvngx.dll,nvngx-wrapper.dll,dlss-enabler.dll,OptiScaler.dll}
+rm -f "$exe_folder_path"/{dxgi.dll,winmm.dll,nvngx.dll,_nvngx.dll,nvngx-wrapper.dll,dlss-enabler.dll,OptiScaler.dll,libxess_dx11.dll,libxess_fg.dll,libxell.dll,D3D12Core.dll}
 
 # === Optional: Backup Original DLLs ===
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_vk.dll" "nvapi64.dll" "amdxcffx64.dll")
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_vk.dll" "nvapi64.dll" "amdxcffx64.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll" "D3D12Core.dll")
 for dll in "${original_dlls[@]}"; do
   [[ -f "$exe_folder_path/$dll" && ! -f "$exe_folder_path/$dll.b" ]] && mv -f "$exe_folder_path/$dll" "$exe_folder_path/$dll.b"
 done
@@ -89,6 +89,9 @@ fi
 
 # === Supporting Libraries ===
 cp -f "$fgmod_path/libxess.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxess_dx11.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxess_fg.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxell.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_dx12.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_vk.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/nvngx.dll" "$exe_folder_path/" || true
@@ -102,6 +105,9 @@ cp -f "$fgmod_path/amdxcffx64.dll" "$exe_folder_path/" || true
 
 # === Additional Support Files ===
 cp -f "$fgmod_path/d3dcompiler_47.dll" "$exe_folder_path/" || true
+
+# === D3D12 OptiScaler Support ===
+cp -f "$fgmod_path/D3D12_Optiscaler/D3D12Core.dll" "$exe_folder_path/" || true
 
 echo "✅ Installation completed successfully!"
 echo "📄 For Steam, add this to the launch options: \"$fgmod_path/fgmod\" %COMMAND%"
