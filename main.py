@@ -234,6 +234,46 @@ class Plugin:
                 "message": f"Installation failed: {str(e)}"
             }
 
+    def _get_expected_version(self):
+        """Get the expected version by checking actual archive filename or package.json"""
+        try:
+            # First, try to find the actual archive file like extract_static_optiscaler does
+            bin_path = Path(decky.DECKY_PLUGIN_DIR) / "bin"
+            if bin_path.exists():
+                for file in bin_path.glob("*.7z"):
+                    if "OptiScaler" in file.name:
+                        # Extract version using same logic as extract_static_optiscaler
+                        version_match = file.name.replace('.7z', '')
+                        if '_v' in version_match:
+                            return 'v' + version_match.split('_v')[1]
+                        else:
+                            return version_match
+            
+            # Fallback: try to get from package.json remote binary configuration
+            package_json_path = Path(decky.DECKY_PLUGIN_DIR) / "package.json"
+            if package_json_path.exists():
+                with open(package_json_path, 'r') as f:
+                    package_data = json.load(f)
+                
+                remote_binaries = package_data.get("remote_binary", [])
+                if remote_binaries:
+                    # Get the first remote binary name
+                    binary_name = remote_binaries[0].get("name", "")
+                    if binary_name:
+                        # Extract version using same logic as extract_static_optiscaler
+                        version_match = binary_name.replace('.7z', '')
+                        if '_v' in version_match:
+                            return 'v' + version_match.split('_v')[1]
+                        else:
+                            return version_match
+                            
+            # Final fallback to hardcoded version if all else fails
+            return "v0.9.0_pre_1"
+            
+        except Exception as e:
+            decky.logger.error(f"Failed to get expected version: {e}")
+            return "v0.9.0_pre_1"
+
     async def check_fgmod_path(self) -> dict:
         path = Path(decky.HOME) / "fgmod"
         required_files = [
@@ -252,16 +292,44 @@ class Plugin:
             "nvngx.dll",
             "D3D12_Optiscaler/D3D12Core.dll",
             "fgmod",
-            "fgmod-uninstaller.sh"
+            "fgmod-uninstaller.sh",
+            "version.txt"
         ]
 
-        if path.exists():
-            for file_name in required_files:
-                if not path.joinpath(file_name).exists():
-                    return {"exists": False}
-            return {"exists": True}
-        else:
-            return {"exists": False}
+        if not path.exists():
+            return {"exists": False, "reason": "fgmod directory does not exist"}
+
+        # Check if all required files exist
+        missing_files = []
+        for file_name in required_files:
+            if not path.joinpath(file_name).exists():
+                missing_files.append(file_name)
+        
+        if missing_files:
+            decky.logger.info(f"Missing files: {missing_files}")
+            return {"exists": False, "reason": f"Missing files: {', '.join(missing_files)}"}
+        
+        # Check version.txt content
+        version_file = path / "version.txt"
+        try:
+            with open(version_file, 'r') as f:
+                installed_version = f.read().strip()
+            
+            # Get expected version dynamically from package.json
+            expected_version = self._get_expected_version()
+            
+            if installed_version != expected_version:
+                decky.logger.info(f"Version mismatch: installed={installed_version}, expected={expected_version}")
+                return {
+                    "exists": False, 
+                    "reason": f"Version mismatch: installed={installed_version}, expected={expected_version}"
+                }
+                
+        except Exception as e:
+            decky.logger.error(f"Failed to read version.txt: {e}")
+            return {"exists": False, "reason": f"Failed to read version.txt: {e}"}
+        
+        return {"exists": True}
 
     async def list_installed_games(self) -> dict:
         try:
