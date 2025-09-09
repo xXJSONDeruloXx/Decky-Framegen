@@ -63,7 +63,7 @@ logger -t fgmod "📄 Preserve INI: $preserve_ini"
 rm -f "$exe_folder_path"/{dxgi.dll,winmm.dll,nvngx.dll,_nvngx.dll,nvngx-wrapper.dll,dlss-enabler.dll,OptiScaler.dll}
 
 # === Optional: Backup Original DLLs ===
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_vk.dll" "nvapi64.dll" "amdxcffx64.dll")
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "nvapi64.dll")
 for dll in "${original_dlls[@]}"; do
   [[ -f "$exe_folder_path/$dll" && ! -f "$exe_folder_path/$dll.b" ]] && mv -f "$exe_folder_path/$dll" "$exe_folder_path/$dll.b"
 done
@@ -89,7 +89,10 @@ fi
 
 # === Supporting Libraries ===
 cp -f "$fgmod_path/libxess.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxess_dx11.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_dx12.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/amd_fidelityfx_framegeneration_dx12.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_vk.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/nvngx.dll" "$exe_folder_path/" || true
 
@@ -98,7 +101,6 @@ cp -f "$fgmod_path/dlssg_to_fsr3_amd_is_better.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/dlssg_to_fsr3.ini" "$exe_folder_path/" || true
 cp -f "$fgmod_path/nvapi64.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/fakenvapi.ini" "$exe_folder_path/" || true
-cp -f "$fgmod_path/amdxcffx64.dll" "$exe_folder_path/" || true
 
 # === Additional Support Files ===
 cp -f "$fgmod_path/d3dcompiler_47.dll" "$exe_folder_path/" || true

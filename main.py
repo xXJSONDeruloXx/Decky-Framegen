@@ -92,7 +92,7 @@ class Plugin:
             return False
 
     async def extract_static_optiscaler(self) -> dict:
-        """Extract OptiScaler from the plugin's bin directory."""
+        """Extract OptiScaler from the plugin's bin directory and copy additional files."""
         try:
             # Set up paths
             bin_path = Path(decky.DECKY_PLUGIN_DIR) / "bin"
@@ -101,7 +101,7 @@ class Plugin:
             # Find the OptiScaler archive in the bin directory
             optiscaler_archive = None
             for file in bin_path.glob("*.7z"):
-                if "OptiScaler" in file.name:
+                if "OptiScaler" in file.name and not "BUNDLE" in file.name:
                     optiscaler_archive = file
                     break
             
@@ -144,6 +144,28 @@ class Plugin:
                     "message": f"Failed to extract OptiScaler archive: {extract_result.stderr}"
                 }
             
+            # Copy additional individual files from bin directory
+            additional_files = [
+                "dlssg_to_fsr3_amd_is_better.dll",
+                "fakenvapi.ini",
+                "nvapi64.dll",
+                "nvngx.dll"
+            ]
+            
+            for file_name in additional_files:
+                src_file = bin_path / file_name
+                dest_file = extract_path / file_name
+                
+                if src_file.exists():
+                    shutil.copy2(src_file, dest_file)
+                    decky.logger.info(f"Copied additional file: {file_name}")
+                else:
+                    decky.logger.warning(f"Additional file not found: {file_name}")
+                    return {
+                        "status": "error",
+                        "message": f"Required file {file_name} not found in plugin bin directory"
+                    }
+            
             # Create renamed copies of OptiScaler.dll
             source_file = extract_path / "OptiScaler.dll"
             renames_dir = extract_path / "renames"
@@ -153,10 +175,10 @@ class Plugin:
             assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
             self._copy_launcher_scripts(assets_dir, extract_path)
             
-            # Extract version from filename
+            # Extract version from filename (e.g., OptiScaler_0.7.9.7z -> v0.7.9)
             version_match = optiscaler_archive.name.replace('.7z', '')
-            if '_v' in version_match:
-                version = 'v' + version_match.split('_v')[1]
+            if 'OptiScaler_' in version_match:
+                version = 'v' + version_match.split('OptiScaler_')[1]
             else:
                 version = version_match
             
@@ -238,13 +260,17 @@ class Plugin:
         path = Path(decky.HOME) / "fgmod"
         required_files = [
             "OptiScaler.dll",
+            "OptiScaler.ini",
             "dlssg_to_fsr3_amd_is_better.dll", 
             "fakenvapi.ini", 
             "nvapi64.dll",
-            "amdxcffx64.dll",
+            "nvngx.dll",
             "amd_fidelityfx_dx12.dll",
+            "amd_fidelityfx_framegeneration_dx12.dll",
+            "amd_fidelityfx_upscaler_dx12.dll",
             "amd_fidelityfx_vk.dll", 
             "libxess.dll",
+            "libxess_dx11.dll",
             "fgmod",
             "fgmod-uninstaller.sh"
         ]
