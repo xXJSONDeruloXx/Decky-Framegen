@@ -77,7 +77,7 @@ class Plugin:
                 updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
                 
                 # Replace Fsr4Update=auto with Fsr4Update=true
-                # updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
+                updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
                 
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
