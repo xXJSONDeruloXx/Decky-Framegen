@@ -53,7 +53,7 @@
   "remote_binary": 
   [
     {
-      "sha256hash":  "77432c5f7f8e28e2b1a205afd97dbf608f132f6c5748a54d2856700c4ea43ee4",
+      "sha256hash":  "109d1030c889a70ad30813fdb60c23d08becaab90c6b7d2ae4f7c71338dd7779",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.9_fsr4_int8/OptiScaler_0.7.9.7z",
       "name":  "OptiScaler_0.7.9.7z",
       "size":  0
