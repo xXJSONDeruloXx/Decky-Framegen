@@ -55,32 +55,27 @@
     {
       "sha256hash":  "109d1030c889a70ad30813fdb60c23d08becaab90c6b7d2ae4f7c71338dd7779",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.9_fsr4_int8/OptiScaler_0.7.9.7z",
-      "name":  "OptiScaler_0.7.9.7z",
-      "size":  0
+      "name":  "OptiScaler_0.7.9.7z"
     },
     {
       "sha256hash":  "7ff6a5e11f85e64a0a89dc9527a22f55485068f8bf9425ab6571137daf0f586a",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.8-pre0_20250816_unsigned_dll-13b2b5d0/dlssg_to_fsr3_amd_is_better.dll",
-      "name":  "dlssg_to_fsr3_amd_is_better.dll",
-      "size":  3040768
+      "name":  "dlssg_to_fsr3_amd_is_better.dll"
     },
     {
       "sha256hash":  "a4bfa3ec7b4badd93ae5e1ad74a582238082d871f54f38f68e7d9fb6384ce772",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.8-pre0_20250816_unsigned_dll-13b2b5d0/fakenvapi.ini",
-      "name":  "fakenvapi.ini",
-      "size":  466
+      "name":  "fakenvapi.ini"
     },
     {
       "sha256hash":  "f4c9e3d35510f2c8b14a41e47721487d3f6663b85441e1be574c45d906b95f06",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.8-pre0_20250816_unsigned_dll-13b2b5d0/nvapi64.dll",
-      "name":  "nvapi64.dll",
-      "size":  404992
+      "name":  "nvapi64.dll"
     },
     {
       "sha256hash":  "1d75e7c1f37f966517f625aa3cc9602ff89d42ad2a7fcbdfa5fc91dab4674149",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.8-pre0_20250816_unsigned_dll-13b2b5d0/nvngx.dll",
-      "name":  "nvngx.dll",
-      "size":  49012784
+      "name":  "nvngx.dll"
     }
   ]
 }
