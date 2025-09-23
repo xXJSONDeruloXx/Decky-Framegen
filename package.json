@@ -58,6 +58,11 @@
       "name":  "OptiScaler_0.7.9.7z"
     },
     {
+      "sha256hash": "9123f83739e7bb39fcb135cafc339606dec78a74c650338ad275ee45c2d59d02",
+      "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/amd-fsr-r-int8/amd_fidelityfx_upscaler_dx12.dll",
+      "name": "amd_fidelityfx_upscaler_dx12.dll"
+    },
+    {
       "sha256hash":  "806020c0444f7841a3a9f661295c16fc482e981e0666d0b9624bf6ccd19c4b5e",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/dlss-enabler-dlssg-september-20/dlssg_to_fsr3_amd_is_better.dll",
       "name":  "dlssg_to_fsr3_amd_is_better.dll"

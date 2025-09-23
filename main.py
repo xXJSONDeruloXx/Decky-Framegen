@@ -6,6 +6,10 @@ import shutil
 import re
 from pathlib import Path
 
+# Toggle to enable overwriting the upscaler DLL from the static remote binary.
+# Set to False or comment out this constant to skip the overwrite by default.
+UPSCALER_OVERWRITE_ENABLED = True
+
 class Plugin:
     async def _main(self):
         decky.logger.info("Framegen plugin loaded")
@@ -174,6 +178,23 @@ class Plugin:
             # Copy launcher scripts from assets
             assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
             self._copy_launcher_scripts(assets_dir, extract_path)
+
+            # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with a newer static binary
+            # Toggle via env DECKY_SKIP_UPSCALER_OVERWRITE=true to skip.
+            try:
+                skip_overwrite = os.environ.get("DECKY_SKIP_UPSCALER_OVERWRITE", "false").lower() in ("1", "true", "yes")
+                if UPSCALER_OVERWRITE_ENABLED and not skip_overwrite:
+                    upscaler_src = bin_path / "amd_fidelityfx_upscaler_dx12.dll"
+                    upscaler_dst = extract_path / "amd_fidelityfx_upscaler_dx12.dll"
+                    if upscaler_src.exists():
+                        shutil.copy2(upscaler_src, upscaler_dst)
+                        decky.logger.info("Overwrote amd_fidelityfx_upscaler_dx12.dll with static remote binary")
+                    else:
+                        decky.logger.warning("amd_fidelityfx_upscaler_dx12.dll not found in bin; skipping overwrite")
+                else:
+                    decky.logger.info("Skipping upscaler DLL overwrite due to DECKY_SKIP_UPSCALER_OVERWRITE")
+            except Exception as e:
+                decky.logger.error(f"Failed upscaler overwrite step: {e}")
             
             # Extract version from filename (e.g., OptiScaler_0.7.9.7z -> v0.7.9)
             version_match = optiscaler_archive.name.replace('.7z', '')
