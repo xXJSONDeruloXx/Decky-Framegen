@@ -1,6 +1,6 @@
 {
   "name": "decky-framegen",
-  "version": "0.11.16",
+  "version": "0.11.17",
   "description": "This plugin installs and manages OptiScaler, a tool that enhances upscaling and enables frame generation in a range of DirectX 12 games.",
   "type": "module",
   "scripts": {
@@ -53,9 +53,9 @@
   "remote_binary": 
   [
     {
-      "sha256hash":  "109d1030c889a70ad30813fdb60c23d08becaab90c6b7d2ae4f7c71338dd7779",
-      "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.9_fsr4_int8/OptiScaler_0.7.9.7z",
-      "name":  "OptiScaler_0.7.9.7z"
+      "sha256hash":  "a877a054110ecffa04c024ac4609982cfa3ffa104a4ce4561f9483c1f6d80073",
+      "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.9.0_pre_4/Optiscaler_0.9.0-pre4.20250922.7z",
+      "name":  "Optiscaler_0.9.0-pre4.20250922.7z"
     },
     {
       "sha256hash": "9123f83739e7bb39fcb135cafc339606dec78a74c650338ad275ee45c2d59d02",
