@@ -43,6 +43,41 @@ else
   done
 fi
 
+for arg in "$@"; do
+  if [[ "$arg" == lutris:rungameid/* ]]; then
+    lutris_id="${arg#lutris:rungameid/}"
+
+    # Get slug from Lutris JSON
+    slug=$(lutris --list-games --json 2>/dev/null | jq -r ".[] | select(.id == $lutris_id) | .slug")
+
+    if [[ -z "$slug" || "$slug" == "null" ]]; then
+      echo "Could not find slug for Lutris ID $lutris_id"
+      break
+    fi
+
+    # Find matching YAML file using slug
+    config_file=$(find ~/.config/lutris/games/ -iname "${slug}-*.yml" | head -1)
+
+    if [[ -z "$config_file" ]]; then
+      echo "No config file found for slug '$slug'"
+      break
+    fi
+
+    # Extract executable path from YAML
+    exe_path=$(grep -E '^\s*exe:' "$config_file" | sed 's/.*exe:[[:space:]]*//')
+
+    if [[ -n "$exe_path" ]]; then
+      exe_folder_path=$(dirname "$exe_path")
+      echo "Resolved executable path: $exe_path"
+      echo "Executable folder: $exe_folder_path"
+    else
+      echo "Executable path not found in $config_file"
+    fi
+
+    break
+  fi
+done
+
 # Fallback to STEAM_COMPAT_INSTALL_PATH when no path was found
 [[ -z "$exe_folder_path" && -n "$STEAM_COMPAT_INSTALL_PATH" ]] && exe_folder_path="$STEAM_COMPAT_INSTALL_PATH"
 
