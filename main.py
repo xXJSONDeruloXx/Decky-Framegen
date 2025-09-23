@@ -98,25 +98,47 @@ class Plugin:
     async def extract_static_optiscaler(self) -> dict:
         """Extract OptiScaler from the plugin's bin directory and copy additional files."""
         try:
+            decky.logger.info("Starting extract_static_optiscaler method")
+            
             # Set up paths
             bin_path = Path(decky.DECKY_PLUGIN_DIR) / "bin"
             extract_path = Path(decky.HOME) / "fgmod"
             
+            decky.logger.info(f"Bin path: {bin_path}")
+            decky.logger.info(f"Extract path: {extract_path}")
+            
+            # Check if bin directory exists
+            if not bin_path.exists():
+                decky.logger.error(f"Bin directory does not exist: {bin_path}")
+                return {"status": "error", "message": f"Bin directory not found: {bin_path}"}
+            
+            # List files in bin directory for debugging
+            bin_files = list(bin_path.glob("*"))
+            decky.logger.info(f"Files in bin directory: {[f.name for f in bin_files]}")
+            
             # Find the OptiScaler archive in the bin directory
             optiscaler_archive = None
             for file in bin_path.glob("*.7z"):
-                if "OptiScaler" in file.name and not "BUNDLE" in file.name:
+                decky.logger.info(f"Checking 7z file: {file.name}")
+                # Check for both "OptiScaler" and "Optiscaler" (case variations) and exclude BUNDLE files
+                if ("OptiScaler" in file.name or "Optiscaler" in file.name) and "BUNDLE" not in file.name:
                     optiscaler_archive = file
+                    decky.logger.info(f"Found OptiScaler archive: {file.name}")
                     break
             
             if not optiscaler_archive:
+                decky.logger.error("OptiScaler archive not found in plugin bin directory")
                 return {"status": "error", "message": "OptiScaler archive not found in plugin bin directory"}
+            
+            decky.logger.info(f"Using archive: {optiscaler_archive}")
             
             # Clean up existing directory
             if extract_path.exists():
+                decky.logger.info(f"Removing existing directory: {extract_path}")
                 shutil.rmtree(extract_path)
             
             extract_path.mkdir(exist_ok=True)
+            decky.logger.info(f"Created extract directory: {extract_path}")
             
             decky.logger.info(f"Extracting {optiscaler_archive.name} to {extract_path}")
             
@@ -129,10 +151,13 @@ class Plugin:
                 str(optiscaler_archive)
             ]
             
+            decky.logger.info(f"Running extraction command: {' '.join(extract_cmd)}")
+            
             # Create a clean environment to avoid PyInstaller issues
             clean_env = os.environ.copy()
             clean_env["LD_LIBRARY_PATH"] = ""
             
+            decky.logger.info("Starting subprocess.run for extraction")
             extract_result = subprocess.run(
                 extract_cmd,
                 capture_output=True,
@@ -140,6 +165,11 @@ class Plugin:
                 check=False,
                 env=clean_env
             )
+            
+            decky.logger.info(f"Extraction completed with return code: {extract_result.returncode}")
+            decky.logger.info(f"Extraction stdout: {extract_result.stdout}")
+            if extract_result.stderr:
+                decky.logger.info(f"Extraction stderr: {extract_result.stderr}")
             
             if extract_result.returncode != 0:
                 decky.logger.error(f"Extraction failed: {extract_result.stderr}")
@@ -149,17 +179,21 @@ class Plugin:
                 }
             
             # Copy additional individual files from bin directory
+            # Note: v0.9.0-pre4 includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
+            # Only copy files that aren't already in the archive or need to be updated
             additional_files = [
-                "dlssg_to_fsr3_amd_is_better.dll",
-                "fakenvapi.ini",
-                "nvapi64.dll",
-                "nvngx.dll"
+                # "dlssg_to_fsr3_amd_is_better.dll",
+                # "fakenvapi.ini",
+                # "nvapi64.dll",
+                "nvngx.dll" # nuvidiuh dll from streamline sdk, not bundled in opti
             ]
             
+            decky.logger.info("Starting additional files copy")
             for file_name in additional_files:
                 src_file = bin_path / file_name
                 dest_file = extract_path / file_name
                 
+                decky.logger.info(f"Checking for additional file: {file_name} at {src_file}")
                 if src_file.exists():
                     shutil.copy2(src_file, dest_file)
                     decky.logger.info(f"Copied additional file: {file_name}")
@@ -170,15 +204,18 @@ class Plugin:
                         "message": f"Required file {file_name} not found in plugin bin directory"
                     }
             
+            decky.logger.info("Creating renamed copies of OptiScaler.dll")
             # Create renamed copies of OptiScaler.dll
             source_file = extract_path / "OptiScaler.dll"
             renames_dir = extract_path / "renames"
             self._create_renamed_copies(source_file, renames_dir)
             
+            decky.logger.info("Copying launcher scripts")
             # Copy launcher scripts from assets
             assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
             self._copy_launcher_scripts(assets_dir, extract_path)
 
+            decky.logger.info("Starting upscaler DLL overwrite check")
             # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with a newer static binary
             # Toggle via env DECKY_SKIP_UPSCALER_OVERWRITE=true to skip.
             try:
@@ -213,9 +250,11 @@ class Plugin:
                 decky.logger.error(f"Failed to create version file: {e}")
             
             # Modify OptiScaler.ini to set FGType=nukems and Fsr4Update=true
+            decky.logger.info("Modifying OptiScaler.ini")
             ini_file = extract_path / "OptiScaler.ini"
             self._modify_optiscaler_ini(ini_file)
             
+            decky.logger.info(f"Successfully completed extraction to ~/fgmod with version {version}")
             return {
                 "status": "success",
                 "message": f"Successfully extracted OptiScaler {version} to ~/fgmod",
@@ -223,7 +262,10 @@ class Plugin:
             }
             
         except Exception as e:
-            decky.logger.error(f"Extract failed: {str(e)}")
+            decky.logger.error(f"Extract failed with exception: {str(e)}")
+            decky.logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            decky.logger.error(f"Traceback: {traceback.format_exc()}")
             return {"status": "error", "message": f"Extract failed: {str(e)}"}
 
     async def run_uninstall_fgmod(self) -> dict:
@@ -283,8 +325,8 @@ class Plugin:
             "OptiScaler.dll",
             "OptiScaler.ini",
             "dlssg_to_fsr3_amd_is_better.dll", 
+            "fakenvapi.dll",        # v0.9.0-pre4 uses fakenvapi.dll (gets renamed to nvapi64.dll in game folder)
             "fakenvapi.ini", 
-            "nvapi64.dll",
             "nvngx.dll",
             "amd_fidelityfx_dx12.dll",
             "amd_fidelityfx_framegeneration_dx12.dll",
@@ -292,6 +334,8 @@ class Plugin:
             "amd_fidelityfx_vk.dll", 
             "libxess.dll",
             "libxess_dx11.dll",
+            "libxess_fg.dll",       # New in v0.9.0-pre4
+            "libxell.dll",          # New in v0.9.0-pre4
             "fgmod",
             "fgmod-uninstaller.sh"
         ]

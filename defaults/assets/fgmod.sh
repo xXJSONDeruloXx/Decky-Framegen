@@ -91,6 +91,8 @@ fi
 # === Supporting Libraries ===
 cp -f "$fgmod_path/libxess.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/libxess_dx11.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxess_fg.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxell.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_dx12.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_framegeneration_dx12.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" "$exe_folder_path/" || true
@@ -99,12 +101,24 @@ cp -f "$fgmod_path/nvngx.dll" "$exe_folder_path/" || true
 
 # === Nukem FG Mod Files (now in fgmod directory) ===
 cp -f "$fgmod_path/dlssg_to_fsr3_amd_is_better.dll" "$exe_folder_path/" || true
-cp -f "$fgmod_path/dlssg_to_fsr3.ini" "$exe_folder_path/" || true
-cp -f "$fgmod_path/nvapi64.dll" "$exe_folder_path/" || true
+# cp -f "$fgmod_path/dlssg_to_fsr3.ini" "$exe_folder_path/" || true
+
+# Note: dlssg_to_fsr3.ini is not included in v0.9.0-pre4 archive
+# Copy fakenvapi.dll as nvapi64.dll (v1.3.8.1) - this replaces the real NVIDIA API
+if [[ -f "$fgmod_path/fakenvapi.dll" ]]; then
+  cp -f "$fgmod_path/fakenvapi.dll" "$exe_folder_path/nvapi64.dll" || true
+  echo "📦 Installed fakenvapi.dll as nvapi64.dll"
+else
+  # Legacy fallback for older setups
+  cp -f "$fgmod_path/nvapi64.dll" "$exe_folder_path/" || true
+  echo "📦 Using legacy nvapi64.dll"
+fi
 cp -f "$fgmod_path/fakenvapi.ini" "$exe_folder_path/" || true
 
 # === Additional Support Files ===
-cp -f "$fgmod_path/d3dcompiler_47.dll" "$exe_folder_path/" || true
+# cp -f "$fgmod_path/d3dcompiler_47.dll" "$exe_folder_path/" || true
+
+# Note: d3dcompiler_47.dll is not included in v0.9.0-pre4 archive
 
 echo "✅ Installation completed successfully!"
 echo "📄 For Steam, add this to the launch options: \"$fgmod_path/fgmod\" %COMMAND%"
