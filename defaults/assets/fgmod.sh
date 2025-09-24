@@ -148,6 +148,10 @@ cp -f "$fgmod_path/dlssg_to_fsr3_amd_is_better.dll" "$exe_folder_path/" || true
 # Note: dlssg_to_fsr3.ini is not included in v0.9.0-pre4 archive
 
 # === FakeNVAPI Files ===
+# Remove legacy nvapi64.dll to avoid conflicts
+rm -f "$exe_folder_path/nvapi64.dll"
+echo "🧹 Removed legacy nvapi64.dll"
+
 # Copy fakenvapi.dll with original name (v1.3.8.1) 
 cp -f "$fgmod_path/fakenvapi.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/fakenvapi.ini" "$exe_folder_path/" || true
