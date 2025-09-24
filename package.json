@@ -68,11 +68,6 @@
       "name": "OptiPatcher_v0.30.asi"
     },
     {
-      "sha256hash":  "f4c9e3d35510f2c8b14a41e47721487d3f6663b85441e1be574c45d906b95f06",
-      "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.8-pre0_20250816_unsigned_dll-13b2b5d0/nvapi64.dll",
-      "name":  "nvapi64.dll"
-    },
-    {
       "sha256hash":  "1d75e7c1f37f966517f625aa3cc9602ff89d42ad2a7fcbdfa5fc91dab4674149",
       "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.8-pre0_20250816_unsigned_dll-13b2b5d0/nvngx.dll",
       "name":  "nvngx.dll"

@@ -185,8 +185,8 @@ class Plugin:
                 }
             
             # Copy additional individual files from bin directory
-            # Note: v0.9.0-pre4 includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
-            # Only copy files that aren't already in the archive or need to be updated
+            # Note: v0.9.0-pre3+ includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
+            # Only copy files that aren't already in the archive (separate remote binaries)
             additional_files = [
                 "nvngx.dll",  # nvidia dll from streamline sdk, not bundled in opti
                 "OptiPatcher_v0.30.asi"  # ASI plugin for OptiScaler spoofing
@@ -260,6 +260,8 @@ class Plugin:
             version_match = optiscaler_archive.name.replace('.7z', '')
             if 'OptiScaler_' in version_match:
                 version = 'v' + version_match.split('OptiScaler_')[1]
+            elif 'Optiscaler_' in version_match:
+                version = 'v' + version_match.split('Optiscaler_')[1]
             else:
                 version = version_match
             
@@ -348,7 +350,7 @@ class Plugin:
             "OptiScaler.dll",
             "OptiScaler.ini",
             "dlssg_to_fsr3_amd_is_better.dll", 
-            "fakenvapi.dll",        # v0.9.0-pre4 uses fakenvapi.dll (gets renamed to nvapi64.dll in game folder)
+            "fakenvapi.dll",        # v0.9.0-pre3+ includes fakenvapi.dll in archive
             "fakenvapi.ini", 
             "nvngx.dll",
             "amd_fidelityfx_dx12.dll",
