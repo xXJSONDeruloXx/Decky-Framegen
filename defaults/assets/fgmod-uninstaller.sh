@@ -121,6 +121,10 @@ rm -f "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_f
 echo "🧹 Removing frame generation mod files..."
 rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini" "fakenvapi.ini" "nvapi64.dll"
 
+# === Remove ASI Plugins ===
+echo "🧹 Removing ASI plugins directory..."
+rm -rf "plugins"
+
 # === Remove Legacy Files ===
 echo "🧹 Removing legacy files..."
 rm -f "dlss-enabler.dll" "dlss-enabler-upscaler.dll" "dlss-enabler.log"

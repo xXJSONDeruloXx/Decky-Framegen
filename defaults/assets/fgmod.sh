@@ -123,6 +123,15 @@ else
   logger -t fgmod "📄 OptiScaler.ini installed to $exe_folder_path"
 fi
 
+# === ASI Plugins Directory ===
+if [[ -d "$fgmod_path/plugins" ]]; then
+  echo "🔌 Installing ASI plugins directory"
+  cp -r "$fgmod_path/plugins" "$exe_folder_path/" || true
+  logger -t fgmod "🔌 ASI plugins directory installed to $exe_folder_path"
+else
+  echo "⚠️ No plugins directory found in fgmod"
+fi
+
 # === Supporting Libraries ===
 cp -f "$fgmod_path/libxess.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/libxess_dx11.dll" "$exe_folder_path/" || true

@@ -71,7 +71,7 @@ class Plugin:
             return False
     
     def _modify_optiscaler_ini(self, ini_file):
-        """Modify OptiScaler.ini to set FGType=nukems and Fsr4Update=true"""
+        """Modify OptiScaler.ini to set FGType=nukems, Fsr4Update=true, and ASI plugin settings"""
         try:
             if ini_file.exists():
                 with open(ini_file, 'r') as f:
@@ -83,10 +83,16 @@ class Plugin:
                 # Replace Fsr4Update=auto with Fsr4Update=true
                 updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
                 
+                # Replace LoadAsiPlugins=auto with LoadAsiPlugins=true
+                updated_content = re.sub(r'LoadAsiPlugins\s*=\s*auto', 'LoadAsiPlugins=true', updated_content)
+                
+                # Replace Path=auto with Path=plugins
+                updated_content = re.sub(r'Path\s*=\s*auto', 'Path=plugins', updated_content)
+                
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
                 
-                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems")
+                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins")
                 return True
             else:
                 decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
@@ -182,10 +188,8 @@ class Plugin:
             # Note: v0.9.0-pre4 includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
             # Only copy files that aren't already in the archive or need to be updated
             additional_files = [
-                # "dlssg_to_fsr3_amd_is_better.dll",
-                # "fakenvapi.ini",
-                # "nvapi64.dll",
-                "nvngx.dll" # nuvidiuh dll from streamline sdk, not bundled in opti
+                "nvngx.dll",  # nvidia dll from streamline sdk, not bundled in opti
+                "OptiPatcher_v0.30.asi"  # ASI plugin for OptiScaler spoofing
             ]
             
             decky.logger.info("Starting additional files copy")
@@ -214,6 +218,25 @@ class Plugin:
             # Copy launcher scripts from assets
             assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
             self._copy_launcher_scripts(assets_dir, extract_path)
+
+            decky.logger.info("Setting up ASI plugins directory")
+            # Create plugins directory and copy OptiPatcher ASI file
+            try:
+                plugins_dir = extract_path / "plugins"
+                plugins_dir.mkdir(exist_ok=True)
+                decky.logger.info(f"Created plugins directory: {plugins_dir}")
+                
+                # Copy OptiPatcher ASI file to plugins directory
+                asi_src = bin_path / "OptiPatcher_v0.30.asi"
+                asi_dst = plugins_dir / "OptiPatcher.asi"  # Rename to generic name
+                
+                if asi_src.exists():
+                    shutil.copy2(asi_src, asi_dst)
+                    decky.logger.info(f"Copied OptiPatcher ASI to plugins directory: {asi_dst}")
+                else:
+                    decky.logger.warning("OptiPatcher ASI file not found in bin directory")
+            except Exception as e:
+                decky.logger.error(f"Failed to setup ASI plugins directory: {e}")
 
             decky.logger.info("Starting upscaler DLL overwrite check")
             # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with a newer static binary
@@ -341,9 +364,16 @@ class Plugin:
         ]
 
         if path.exists():
+            # Check required files
             for file_name in required_files:
                 if not path.joinpath(file_name).exists():
                     return {"exists": False}
+            
+            # Check plugins directory and OptiPatcher ASI
+            plugins_dir = path / "plugins"
+            if not plugins_dir.exists() or not (plugins_dir / "OptiPatcher.asi").exists():
+                return {"exists": False}
+                
             return {"exists": True}
         else:
             return {"exists": False}
