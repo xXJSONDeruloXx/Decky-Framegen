@@ -119,7 +119,12 @@ rm -f "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_f
 
 # === Remove FG Mod Files ===
 echo "🧹 Removing frame generation mod files..."
-rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini" "fakenvapi.ini" "nvapi64.dll"
+rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini"
+
+# === Remove NVAPI Files (Current and Legacy) ===
+echo "🧹 Removing NVAPI files..."
+rm -f "fakenvapi.dll" "fakenvapi.ini"  # Current v0.9.0-pre4 approach
+rm -f "nvapi64.dll"                    # Legacy cleanup for older versions
 
 # === Remove ASI Plugins ===
 echo "🧹 Removing ASI plugins directory..."
