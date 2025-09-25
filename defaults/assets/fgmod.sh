@@ -40,6 +40,10 @@ else
       [[ "$arg" == *"Warhammer 40,000 DARKTIDE"* ]] && arg=${arg//launcher\/Launcher.exe/binaries/Darktide.exe}
       [[ "$arg" == *"Warhammer Vermintide 2"* ]]    && arg=${arg//launcher\/Launcher.exe/binaries_dx12/vermintide2_dx12.exe}
       [[ "$arg" == *"Satisfactory"* ]]   && arg=${arg//FactoryGameSteam.exe/Engine/Binaries/Win64/FactoryGameSteam-Win64-Shipping.exe}
+      # Convert path (excluding filename) to lowercase for case-insensitive matching
+      arg_dir=$(dirname "$arg")
+      arg_dir_lower=$(echo "$arg_dir" | tr '[:upper:]' '[:lower:]')
+      [[ ("$arg_dir_lower" == *"ffxiv"* || "$arg_dir_lower" == *"final fantasy xiv"*) && ("$arg" == *"/boot/"* || "$arg" == *"\\boot\\"*) ]] && arg=${arg//\/boot\//\/game\/} && arg=${arg//\\boot\\//\\game\\}
       exe_folder_path=$(dirname "$arg")
       break
     fi
