@@ -1,6 +1,6 @@
 {
   "name": "decky-framegen",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "description": "This plugin installs and manages OptiScaler, a tool that enhances upscaling and enables frame generation in a range of DirectX 12 games.",
   "type": "module",
   "scripts": {

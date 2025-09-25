@@ -99,10 +99,14 @@ logger -t fgmod "📄 Preserve INI: $preserve_ini"
 rm -f "$exe_folder_path"/{dxgi.dll,winmm.dll,nvngx.dll,_nvngx.dll,nvngx-wrapper.dll,dlss-enabler.dll,OptiScaler.dll}
 
 # === Optional: Backup Original DLLs ===
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "nvapi64.dll")
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll")
 for dll in "${original_dlls[@]}"; do
   [[ -f "$exe_folder_path/$dll" && ! -f "$exe_folder_path/$dll.b" ]] && mv -f "$exe_folder_path/$dll" "$exe_folder_path/$dll.b"
 done
+
+# === Remove nvapi64.dll and its backup (conflicts from previous fakenvapi versions) ===
+rm -f "$exe_folder_path/nvapi64.dll" "$exe_folder_path/nvapi64.dll.b"
+echo "🧹 Cleaned up nvapi64.dll and backup (legacy fakenvapi conflicts)"
 
 # === Core Install ===
 if [[ -f "$fgmod_path/renames/$dll_name" ]]; then

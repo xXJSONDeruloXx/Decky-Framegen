@@ -124,7 +124,7 @@ rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini"
 # === Remove NVAPI Files (Current and Legacy) ===
 echo "🧹 Removing NVAPI files..."
 rm -f "fakenvapi.dll" "fakenvapi.ini"  # Current v0.9.0-pre4 approach
-rm -f "nvapi64.dll"                    # Legacy cleanup for older versions
+rm -f "nvapi64.dll" "nvapi64.dll.b"    # Legacy cleanup for older versions and backups
 
 # === Remove ASI Plugins ===
 echo "🧹 Removing ASI plugins directory..."
@@ -138,7 +138,7 @@ rm -f "dlssg_to_fsr3_amd_is_better-3.0.dll"
 
 # === Restore Original DLLs ===
 echo "🔄 Restoring original DLLs..."
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "nvapi64.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
 for dll in "${original_dlls[@]}"; do
   if [[ -f "${dll}.b" ]]; then
     mv "${dll}.b" "$dll"

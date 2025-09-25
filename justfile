@@ -9,3 +9,4 @@ test:
 
 clean:
     rm -rf node_modules dist
+    sudo rm -rf /tmp/decky
