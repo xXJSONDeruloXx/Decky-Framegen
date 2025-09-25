@@ -43,7 +43,10 @@ else
       # Convert path (excluding filename) to lowercase for case-insensitive matching
       arg_dir=$(dirname "$arg")
       arg_dir_lower=$(echo "$arg_dir" | tr '[:upper:]' '[:lower:]')
-      [[ ("$arg_dir_lower" == *"ffxiv"* || "$arg_dir_lower" == *"final fantasy xiv"*) && ("$arg" == *"/boot/"* || "$arg" == *"\\boot\\"*) ]] && arg=${arg//\/boot\//\/game\/} && arg=${arg//\\boot\\//\\game\\}
+      if [[ ("$arg_dir_lower" == *"ffxiv"* || "$arg_dir_lower" == *"final fantasy xiv"*) && ("$arg" == *"/boot/"* || "$arg" == *"\\boot\\"*) ]]; then
+        arg=${arg//\/boot\//\/game\/}
+        arg=${arg//\\boot\\//\\game\\}
+      fi
       exe_folder_path=$(dirname "$arg")
       break
     fi
