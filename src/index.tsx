@@ -26,7 +26,10 @@ function MainContent() {
 
   return (
     <>
-      <OptiScalerControls pathExists={pathExists} setPathExists={setPathExists} />
+      <OptiScalerControls
+        pathExists={pathExists}
+        setPathExists={setPathExists}
+      />
       {pathExists === true ? (
         <>
           {/* <InstalledGamesSection /> */}
