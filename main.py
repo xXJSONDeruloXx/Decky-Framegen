@@ -429,5 +429,18 @@ class Plugin:
             decky.logger.error(str(e))
             return {"status": "error", "message": str(e)}
 
+    async def get_path_defaults(self) -> dict:
+        try:
+            home_path = Path(decky.HOME)
+        except TypeError:
+            home_path = Path(str(decky.HOME))
+
+        steam_common = home_path / ".local" / "share" / "Steam" / "steamapps" / "common"
+
+        return {
+            "home": str(home_path),
+            "steam_common": str(steam_common),
+        }
+
     async def log_error(self, error: str) -> None:
         decky.logger.error(f"FRONTEND: {error}")

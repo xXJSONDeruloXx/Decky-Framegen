@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ButtonItem, Field, PanelSectionRow, ToggleField } from "@decky/ui";
 import { FileSelectionType, openFilePicker } from "@decky/api";
+import { getPathDefaults } from "../api";
 import type { CustomOverrideConfig } from "../types/index";
 
 interface CustomPathOverrideProps {
@@ -8,8 +9,22 @@ interface CustomPathOverrideProps {
 }
 
 const DEFAULT_START_PATH = "/home";
+const DEFAULT_STEAM_LIBRARY_PATH = "/home/deck/.local/share/Steam/steamapps/common";
+
+interface PathDefaults {
+  home: string;
+  steamCommon: string;
+}
+
+const INITIAL_PATH_DEFAULTS: PathDefaults = {
+  home: DEFAULT_START_PATH,
+  steamCommon: DEFAULT_STEAM_LIBRARY_PATH,
+};
 
 const normalizePath = (path: string) => path.replace(/\\/g, "/");
+
+const stripTrailingSlash = (value: string) =>
+  value.endsWith("/") ? value.slice(0, -1) : value;
 
 const escapeForDoubleQuotes = (value: string) =>
   value.replace(/[`"\\$]/g, (match) => `\\${match}`);
@@ -30,6 +45,14 @@ const escapeForReplacement = (value: string) =>
     .replace(/\$/g, "\\$");
 
 const quoteForShell = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+
+const dirname = (path: string) => {
+  const normalized = normalizePath(path);
+  const parts = normalized.split("/");
+  parts.pop();
+  const dir = parts.join("/");
+  return dir.length > 0 ? dir : "/";
+};
 
 const longestCommonPrefix = (left: string[], right: string[]) => {
   const length = Math.min(left.length, right.length);
@@ -129,6 +152,40 @@ export const CustomPathOverride = ({ onOverrideChange }: CustomPathOverrideProps
   const [launcherPath, setLauncherPath] = useState<string | null>(null);
   const [overridePath, setOverridePath] = useState<string | null>(null);
   const [isEnabled, setEnabled] = useState(false);
+  const [pathDefaults, setPathDefaults] = useState<PathDefaults>(INITIAL_PATH_DEFAULTS);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchDefaults = async () => {
+      try {
+        const result = await getPathDefaults();
+        if (!result) {
+          return;
+        }
+
+        const home = result.home ? normalizePath(result.home) : INITIAL_PATH_DEFAULTS.home;
+        const steamCommonSource = result.steam_common
+          ? normalizePath(result.steam_common)
+          : normalizePath(`${stripTrailingSlash(home)}/.local/share/Steam/steamapps/common`);
+
+        if (!cancelled) {
+          setPathDefaults({
+            home,
+            steamCommon: steamCommonSource || INITIAL_PATH_DEFAULTS.steamCommon,
+          });
+        }
+      } catch (err) {
+        console.error("CustomPathOverride -> getPathDefaults", err);
+      }
+    };
+
+    fetchDefaults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const { config, error } = useMemo(
     () => buildOverride(launcherPath, overridePath),
@@ -143,27 +200,58 @@ export const CustomPathOverride = ({ onOverrideChange }: CustomPathOverrideProps
     }
   }, [config, isEnabled, onOverrideChange]);
 
+  interface PickerArgs {
+    existing: string | null;
+    setter: (value: string) => void;
+    fallbackStart?: string | null;
+  }
+
   const openPicker = useCallback(
-    async (existing: string | null, setter: (value: string) => void) => {
-      try {
-        const startPath = existing ? normalizePath(existing) : DEFAULT_START_PATH;
-        const result = await openFilePicker(
-          FileSelectionType.FILE,
-          startPath,
-          true,
-          false,
-          undefined,
-          undefined,
-          true
-        );
-        if (result?.path) {
-          setter(normalizePath(result.path));
+    async ({ existing, setter, fallbackStart }: PickerArgs) => {
+      const candidates = new Set<string>();
+
+      if (existing) {
+        candidates.add(normalizePath(existing));
+      } else {
+        if (fallbackStart) {
+          candidates.add(normalizePath(fallbackStart));
         }
-      } catch (err) {
-        console.error("CustomPathOverride -> openPicker", err);
+        candidates.add(pathDefaults.steamCommon);
+        candidates.add(pathDefaults.home);
+      }
+
+      let lastError: unknown = null;
+
+      for (const candidate of candidates) {
+        if (!candidate) {
+          continue;
+        }
+
+        try {
+          const result = await openFilePicker(
+            FileSelectionType.FILE,
+            candidate,
+            true,
+            true,
+            undefined,
+            undefined,
+            true
+          );
+
+          if (result?.path) {
+            setter(normalizePath(result.path));
+            return;
+          }
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (lastError) {
+        console.error("CustomPathOverride -> openPicker", lastError);
       }
     },
-    []
+    [pathDefaults]
   );
 
   const handleToggle = (value: boolean) => {
@@ -193,7 +281,13 @@ export const CustomPathOverride = ({ onOverrideChange }: CustomPathOverrideProps
           <PanelSectionRow>
             <ButtonItem
               layout="below"
-              onClick={() => openPicker(launcherPath, setLauncherPath)}
+              onClick={() =>
+                openPicker({
+                  existing: launcherPath,
+                  setter: setLauncherPath,
+                  fallbackStart: pathDefaults.steamCommon,
+                })
+              }
               description={launcherPath || "Pick the EXE Steam currently uses."}
             >
               Select Steam-provided EXE
@@ -203,8 +297,20 @@ export const CustomPathOverride = ({ onOverrideChange }: CustomPathOverrideProps
           <PanelSectionRow>
             <ButtonItem
               layout="below"
-              onClick={() => openPicker(overridePath, setOverridePath)}
-              description={overridePath || "Pick the executable that should run instead."}
+              disabled={!launcherPath}
+              onClick={() =>
+                launcherPath &&
+                openPicker({
+                  existing: overridePath,
+                  setter: setOverridePath,
+                  fallbackStart: launcherPath ? dirname(launcherPath) : pathDefaults.steamCommon,
+                })
+              }
+              description={
+                launcherPath
+                  ? overridePath || "Pick the executable that should run instead."
+                  : "Select the Steam-provided executable first."
+              }
             >
               Select Override EXE
             </ButtonItem>

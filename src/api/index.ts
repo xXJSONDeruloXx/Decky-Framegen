@@ -21,3 +21,8 @@ export const listInstalledGames = callable<
 >("list_installed_games");
 
 export const logError = callable<[string], void>("log_error");
+
+export const getPathDefaults = callable<
+  [],
+  { home: string; steam_common?: string }
+>("get_path_defaults");
