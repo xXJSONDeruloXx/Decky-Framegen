@@ -201,7 +201,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualP
     <>
       <PanelSectionRow>
         <ToggleField
-          label="Manual Patch Controls"
+          label="Advanced Mode"
           description={
             isAvailable
               ? "Manually apply OptiScaler to a specific game directory."
