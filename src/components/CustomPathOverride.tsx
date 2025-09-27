@@ -1,387 +1,270 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ButtonItem, Field, PanelSectionRow, ToggleField } from "@decky/ui";
 import { FileSelectionType, openFilePicker } from "@decky/api";
-import { getPathDefaults } from "../api";
-import type { CustomOverrideConfig } from "../types/index";
-
-interface CustomPathOverrideProps {
-  onOverrideChange: (override: CustomOverrideConfig | null) => void;
-}
-
-const DEFAULT_START_PATH = "/home";
-const DEFAULT_STEAM_LIBRARY_PATH = "/home/deck/.local/share/Steam/steamapps/common";
+import { getPathDefaults, runManualPatch, runManualUnpatch } from "../api";
+import type { ApiResponse } from "../types/index";
 
 interface PathDefaults {
   home: string;
   steamCommon: string;
 }
 
-const INITIAL_PATH_DEFAULTS: PathDefaults = {
-  home: DEFAULT_START_PATH,
-  steamCommon: DEFAULT_STEAM_LIBRARY_PATH,
+const DEFAULT_HOME = "/home";
+const DEFAULT_STEAM_COMMON = "/home/deck/.local/share/Steam/steamapps/common";
+
+const INITIAL_DEFAULTS: PathDefaults = {
+  home: DEFAULT_HOME,
+  steamCommon: DEFAULT_STEAM_COMMON,
 };
 
-const normalizePath = (path: string) => path.replace(/\\/g, "/");
+const normalizePath = (value: string) => value.replace(/\\/g, "/");
 
 const stripTrailingSlash = (value: string) =>
-  value.endsWith("/") ? value.slice(0, -1) : value;
+  value.length > 1 && value.endsWith("/") ? value.slice(0, -1) : value;
 
-const escapeForDoubleQuotes = (value: string) =>
-  value.replace(/[`"\\$]/g, (match) => `\\${match}`);
-
-const escapeForPattern = (value: string) =>
-  value
-    .replace(/\\/g, "\\\\")
-    .replace(/\//g, "\\/")
-    .replace(/\[/g, "\\[")
-    .replace(/\]/g, "\\]")
-    .replace(/\*/g, "\\*")
-    .replace(/\?/g, "\\?");
-
-const escapeForReplacement = (value: string) =>
-  value
-    .replace(/\\/g, "\\\\")
-    .replace(/\//g, "\\/")
-    .replace(/\$/g, "\\$");
-
-const quoteForShell = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
-
-const dirname = (path: string) => {
-  const normalized = normalizePath(path);
-  const parts = normalized.split("/");
-  parts.pop();
-  const dir = parts.join("/");
-  return dir.length > 0 ? dir : "/";
-};
-
-const longestCommonPrefix = (left: string[], right: string[]) => {
-  const length = Math.min(left.length, right.length);
-  let idx = 0;
-  while (idx < length && left[idx] === right[idx]) {
-    idx++;
+const ensureDirectory = (value: string) => {
+  const normalized = normalizePath(value);
+  const lastSegment = normalized.substring(normalized.lastIndexOf("/") + 1);
+  if (!lastSegment || !lastSegment.includes(".")) {
+    return stripTrailingSlash(normalized);
   }
-  return idx;
+  const parent = normalized.slice(0, normalized.lastIndexOf("/"));
+  return parent || "/";
 };
 
-interface ComputedOverride {
-  config: CustomOverrideConfig | null;
-  error: string | null;
+interface ManualPatchControlsProps {
+  isAvailable: boolean;
 }
 
-const buildOverride = (
-  rawDefault: string | null,
-  rawOverride: string | null
-): ComputedOverride => {
-  if (!rawDefault || !rawOverride) {
-    return { config: null, error: null };
-  }
+interface PickerState {
+  selectedPath: string | null;
+  lastError: string | null;
+}
 
-  const defaultPath = normalizePath(rawDefault.trim());
-  const overridePath = normalizePath(rawOverride.trim());
-
-  if (defaultPath === overridePath) {
-    return {
-      config: null,
-      error: "Paths are identical. Choose a different target executable.",
-    };
-  }
-
-  const defaultParts = defaultPath.split("/").filter(Boolean);
-  const overrideParts = overridePath.split("/").filter(Boolean);
-
-  if (!defaultParts.length || !overrideParts.length) {
-    return {
-      config: null,
-      error: "Unable to parse selected paths. Pick them again.",
-    };
-  }
-
-  const prefixLength = longestCommonPrefix(defaultParts, overrideParts);
-
-  if (prefixLength < 2) {
-    return {
-      config: null,
-      error: "Selections do not share a common game folder.",
-    };
-  }
-
-  const searchSuffixParts = defaultParts.slice(prefixLength);
-  const replaceSuffixParts = overrideParts.slice(prefixLength);
-
-  if (!searchSuffixParts.length || !replaceSuffixParts.length) {
-    return {
-      config: null,
-      error: "Could not determine differing portion of the paths.",
-    };
-  }
-
-  const searchSuffix = searchSuffixParts.join("/");
-  const replaceSuffix = replaceSuffixParts.join("/");
-  const pattern = defaultParts[prefixLength - 1] ?? defaultParts[defaultParts.length - 1];
-
-  if (!pattern) {
-    return {
-      config: null,
-      error: "Unable to infer game identifier from path.",
-    };
-  }
-
-  const escapedPattern = escapeForDoubleQuotes(pattern);
-  const escapedSearch = escapeForPattern(searchSuffix);
-  const escapedReplace = escapeForReplacement(replaceSuffix);
-
-  const expression = `[[ "$arg" == *"${escapedPattern}"* ]] && arg=\${arg//${escapedSearch}/${escapedReplace}}`;
-  const snippet = `[[ "$arg" == *"${pattern}"* ]] && arg=\${arg//${searchSuffix}/${replaceSuffix}}`;
-  const envAssignment = `FGMOD_OVERRIDE_EXPRESSION=${quoteForShell(expression)}`;
-
-  const config: CustomOverrideConfig = {
-    defaultPath,
-    overridePath,
-    pattern,
-    searchSuffix,
-    replaceSuffix,
-    expression,
-    snippet,
-    envAssignment,
-  };
-
-  return { config, error: null };
+const INITIAL_PICKER_STATE: PickerState = {
+  selectedPath: null,
+  lastError: null,
 };
 
-export const CustomPathOverride = ({ onOverrideChange }: CustomPathOverrideProps) => {
-  const [launcherPath, setLauncherPath] = useState<string | null>(null);
-  const [overridePath, setOverridePath] = useState<string | null>(null);
+const formatResultMessage = (result: ApiResponse | null) => {
+  if (!result) return null;
+  if (result.status === "success") {
+    return result.message || result.output || "Operation completed successfully.";
+  }
+  return result.message || result.output || "Operation failed.";
+};
+
+export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) => {
   const [isEnabled, setEnabled] = useState(false);
-  const [pathDefaults, setPathDefaults] = useState<PathDefaults>(INITIAL_PATH_DEFAULTS);
+  const [defaults, setDefaults] = useState<PathDefaults>(INITIAL_DEFAULTS);
+  const [pickerState, setPickerState] = useState<PickerState>(INITIAL_PICKER_STATE);
+  const [isPatching, setIsPatching] = useState(false);
+  const [isUnpatching, setIsUnpatching] = useState(false);
+  const [operationResult, setOperationResult] = useState<ApiResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchDefaults = async () => {
+    (async () => {
       try {
-        const result = await getPathDefaults();
-        if (!result) {
-          return;
-        }
+        const response = await getPathDefaults();
+        if (!response || cancelled) return;
 
-        const home = result.home ? normalizePath(result.home) : INITIAL_PATH_DEFAULTS.home;
-        const steamCommonSource = result.steam_common
-          ? normalizePath(result.steam_common)
+        const home = response.home ? normalizePath(response.home) : DEFAULT_HOME;
+        const steamCommon = response.steam_common
+          ? normalizePath(response.steam_common)
           : normalizePath(`${stripTrailingSlash(home)}/.local/share/Steam/steamapps/common`);
 
-        if (!cancelled) {
-          setPathDefaults({
-            home,
-            steamCommon: steamCommonSource || INITIAL_PATH_DEFAULTS.steamCommon,
-          });
-        }
+        setDefaults({
+          home,
+          steamCommon: steamCommon || DEFAULT_STEAM_COMMON,
+        });
       } catch (err) {
-        console.error("CustomPathOverride -> getPathDefaults", err);
+        console.error("ManualPatchControls -> getPathDefaults", err);
       }
-    };
-
-    fetchDefaults();
+    })();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const { config, error } = useMemo(
-    () => buildOverride(launcherPath, overridePath),
-    [launcherPath, overridePath]
-  );
-
   useEffect(() => {
-    if (isEnabled && config) {
-      onOverrideChange(config);
-    } else {
-      onOverrideChange(null);
+    if (!isAvailable) {
+      setEnabled(false);
+      setPickerState(INITIAL_PICKER_STATE);
+      setOperationResult(null);
     }
-  }, [config, isEnabled, onOverrideChange]);
+  }, [isAvailable]);
 
-  interface PickerArgs {
-    existing: string | null;
-    setter: (value: string) => void;
-    fallbackStart?: string | null;
-  }
+  const canInteract = isAvailable && isEnabled;
+  const selectedPath = pickerState.selectedPath;
+  const statusMessage = useMemo(() => formatResultMessage(operationResult), [operationResult]);
+  const wasSuccessful = operationResult?.status === "success";
 
-  const openPicker = useCallback(
-    async ({ existing, setter, fallbackStart }: PickerArgs) => {
-      const candidates = new Set<string>();
+  const openDirectoryPicker = useCallback(async () => {
+    const candidates = [
+      selectedPath,
+      defaults.steamCommon,
+      defaults.home,
+    ];
 
-      if (existing) {
-        candidates.add(normalizePath(existing));
-      } else {
-        if (fallbackStart) {
-          candidates.add(normalizePath(fallbackStart));
+    let lastError: string | null = null;
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+
+      const startPath = ensureDirectory(candidate);
+
+      try {
+        const result = await openFilePicker(
+          FileSelectionType.FOLDER,
+          startPath,
+          true,
+          true,
+          undefined,
+          undefined,
+          true
+        );
+
+        if (result?.path) {
+          setPickerState({ selectedPath: normalizePath(result.path), lastError: null });
+          setOperationResult(null);
+          return;
         }
-        candidates.add(pathDefaults.steamCommon);
-        candidates.add(pathDefaults.home);
+      } catch (err) {
+        console.error("ManualPatchControls -> openDirectoryPicker", err);
+        lastError = err instanceof Error ? err.message : String(err);
       }
+    }
 
-      let lastError: unknown = null;
+    setPickerState((prev) => ({ ...prev, lastError }));
+  }, [defaults.home, defaults.steamCommon, selectedPath]);
 
-      for (const candidate of candidates) {
-        if (!candidate) {
-          continue;
-        }
+  const runOperation = useCallback(
+    async (action: "patch" | "unpatch") => {
+      if (!selectedPath) return;
 
-        try {
-          const result = await openFilePicker(
-            FileSelectionType.FILE,
-            candidate,
-            true,
-            true,
-            undefined,
-            undefined,
-            true
-          );
+      const setBusy = action === "patch" ? setIsPatching : setIsUnpatching;
+      setBusy(true);
+      setOperationResult(null);
 
-          if (result?.path) {
-            setter(normalizePath(result.path));
-            return;
-          }
-        } catch (err) {
-          lastError = err;
-        }
-      }
-
-      if (lastError) {
-        console.error("CustomPathOverride -> openPicker", lastError);
+      try {
+        const response =
+          action === "patch"
+            ? await runManualPatch(selectedPath)
+            : await runManualUnpatch(selectedPath);
+        setOperationResult(response ?? { status: "error", message: "No response from backend." });
+      } catch (err) {
+        setOperationResult({
+          status: "error",
+          message: err instanceof Error ? err.message : String(err),
+        });
+      } finally {
+        setBusy(false);
       }
     },
-    [pathDefaults]
+    [selectedPath]
   );
 
   const handleToggle = (value: boolean) => {
+    if (!isAvailable) {
+      setEnabled(false);
+      return;
+    }
+
     setEnabled(value);
     if (!value) {
-      setLauncherPath(null);
-      setOverridePath(null);
-      onOverrideChange(null);
-    } else if (config) {
-      onOverrideChange(config);
+      setPickerState(INITIAL_PICKER_STATE);
+      setOperationResult(null);
     }
   };
+
+  const busy = isPatching || isUnpatching;
 
   return (
     <>
       <PanelSectionRow>
         <ToggleField
-          label="Custom Launcher Override"
-          description="Select launcher and target executables from the Deck's file browser."
-          checked={isEnabled}
+          label="Manual Patch Controls"
+          description={
+            isAvailable
+              ? "Manually apply OptiScaler to a specific game directory."
+              : "Install OptiScaler first to enable manual patching."
+          }
+          checked={isEnabled && isAvailable}
+          disabled={!isAvailable}
           onChange={handleToggle}
         />
       </PanelSectionRow>
 
-      {isEnabled && (
+      {canInteract && (
         <>
           <PanelSectionRow>
             <ButtonItem
               layout="below"
-              onClick={() =>
-                openPicker({
-                  existing: launcherPath,
-                  setter: setLauncherPath,
-                  fallbackStart: pathDefaults.steamCommon,
-                })
-              }
-              description={launcherPath || "Pick the EXE Steam currently uses."}
-            >
-              Select Steam-provided EXE
-            </ButtonItem>
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              disabled={!launcherPath}
-              onClick={() =>
-                launcherPath &&
-                openPicker({
-                  existing: overridePath,
-                  setter: setOverridePath,
-                  fallbackStart: launcherPath ? dirname(launcherPath) : pathDefaults.steamCommon,
-                })
-              }
+              onClick={openDirectoryPicker}
               description={
-                launcherPath
-                  ? overridePath || "Pick the executable that should run instead."
-                  : "Select the Steam-provided executable first."
+                selectedPath || "Choose the game's installation directory (where the EXE lives)."
               }
             >
-              Select Override EXE
+              Select directory
             </ButtonItem>
           </PanelSectionRow>
 
-          {(launcherPath || overridePath) && (
-            <PanelSectionRow>
-              <ButtonItem
-                layout="below"
-                onClick={() => {
-                  setLauncherPath(null);
-                  setOverridePath(null);
-                }}
-              >
-                Clear selections
-              </ButtonItem>
-            </PanelSectionRow>
-          )}
-
-          {error && (
+          {pickerState.lastError && (
             <PanelSectionRow>
               <Field
-                label="Override status"
-                description={error}
+                label="Picker error"
+                description={pickerState.lastError}
               >
                 ⚠️
               </Field>
             </PanelSectionRow>
           )}
 
-          {!error && config && (
+          {selectedPath && (
             <>
               <PanelSectionRow>
                 <Field
-                  label="Detected game"
-                  description="Based on the shared folder between both selections."
+                  label="Target directory"
+                  description="OptiScaler files will be copied here."
                 >
-                  {config.pattern}
+                  {selectedPath}
                 </Field>
               </PanelSectionRow>
 
               <PanelSectionRow>
-                <Field
-                  label="Code snippet"
-                  description="This is added to fgmod before resolving the install path."
-                  bottomSeparator="none"
+                <ButtonItem
+                  layout="below"
+                  disabled={busy}
+                  onClick={() => runOperation("patch")}
                 >
-                  <div
-                    style={{
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      borderRadius: "6px",
-                      padding: "12px",
-                      fontFamily: "monospace",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {config.snippet}
-                  </div>
-                </Field>
+                  {isPatching ? "Patching..." : "Patch directory"}
+                </ButtonItem>
               </PanelSectionRow>
 
               <PanelSectionRow>
-                <Field
-                  label="Environment preview"
-                  description="Automatically appended to the Patch command."
+                <ButtonItem
+                  layout="below"
+                  disabled={busy}
+                  onClick={() => runOperation("unpatch")}
                 >
-                  {config.envAssignment}
-                </Field>
+                  {isUnpatching ? "Reverting..." : "Unpatch directory"}
+                </ButtonItem>
               </PanelSectionRow>
             </>
+          )}
+
+          {operationResult && (
+            <PanelSectionRow>
+              <Field
+                label={wasSuccessful ? "Last action succeeded" : "Last action failed"}
+                description={wasSuccessful ? undefined : operationResult.output?.slice(0, 200)}
+              >
+                {statusMessage}
+              </Field>
+            </PanelSectionRow>
           )}
         </>
       )}

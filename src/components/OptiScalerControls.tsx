@@ -10,8 +10,7 @@ import { ClipboardCommands } from "./ClipboardCommands";
 import { InstructionCard } from "./InstructionCard";
 import { OptiScalerWiki } from "./OptiScalerWiki";
 import { UninstallButton } from "./UninstallButton";
-import { CustomPathOverride } from "./CustomPathOverride";
-import type { CustomOverrideConfig } from "../types/index";
+import { ManualPatchControls } from "./CustomPathOverride";
 
 interface OptiScalerControlsProps {
   pathExists: boolean | null;
@@ -23,14 +22,6 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
   const [uninstalling, setUninstalling] = useState(false);
   const [installResult, setInstallResult] = useState<OperationResult | null>(null);
   const [uninstallResult, setUninstallResult] = useState<OperationResult | null>(null);
-  const [overrideConfig, setOverrideConfig] = useState<CustomOverrideConfig | null>(null);
-
-  useEffect(() => {
-    if (pathExists !== true && overrideConfig) {
-      setOverrideConfig(null);
-    }
-  }, [pathExists, overrideConfig]);
-
   useEffect(() => {
     if (installResult) {
       return createAutoCleanupTimer(() => setInstallResult(null), TIMEOUTS.resultDisplay);
@@ -85,11 +76,9 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
       
       <OptiScalerHeader pathExists={pathExists} />
       
-      {pathExists === true && (
-        <CustomPathOverride onOverrideChange={setOverrideConfig} />
-      )}
+      <ManualPatchControls isAvailable={pathExists === true} />
 
-      <ClipboardCommands pathExists={pathExists} overrideConfig={overrideConfig} />
+      <ClipboardCommands pathExists={pathExists} />
       
       <InstructionCard pathExists={pathExists} />
       
