@@ -61,6 +61,7 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
   const [isPatching, setIsPatching] = useState(false);
   const [isUnpatching, setIsUnpatching] = useState(false);
   const [operationResult, setOperationResult] = useState<ApiResponse | null>(null);
+  const [lastOperation, setLastOperation] = useState<"patch" | "unpatch" | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +95,7 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
       setEnabled(false);
       setPickerState(INITIAL_PICKER_STATE);
       setOperationResult(null);
+      setLastOperation(null);
     }
   }, [isAvailable]);
 
@@ -101,6 +103,13 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
   const selectedPath = pickerState.selectedPath;
   const statusMessage = useMemo(() => formatResultMessage(operationResult), [operationResult]);
   const wasSuccessful = operationResult?.status === "success";
+  const statusLabel = useMemo(() => {
+    if (!operationResult || !lastOperation) return null;
+    if (operationResult.status === "success") {
+      return lastOperation === "patch" ? "Game patched" : "Game unpatched";
+    }
+    return lastOperation === "patch" ? "Patch failed" : "Unpatch failed";
+  }, [lastOperation, operationResult]);
 
   const openDirectoryPicker = useCallback(async () => {
     const candidates = [
@@ -146,6 +155,7 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
       if (!selectedPath) return;
 
       const setBusy = action === "patch" ? setIsPatching : setIsUnpatching;
+  setLastOperation(action);
       setBusy(true);
       setOperationResult(null);
 
@@ -177,6 +187,7 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
     if (!value) {
       setPickerState(INITIAL_PICKER_STATE);
       setOperationResult(null);
+      setLastOperation(null);
     }
   };
 
@@ -204,9 +215,7 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
             <ButtonItem
               layout="below"
               onClick={openDirectoryPicker}
-              description={
-                selectedPath || "Choose the game's installation directory (where the EXE lives)."
-              }
+              description="Choose the game's installation directory (where the EXE lives)."
             >
               Select directory
             </ButtonItem>
@@ -230,7 +239,21 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
                   label="Target directory"
                   description="OptiScaler files will be copied here."
                 >
-                  {selectedPath}
+                  <div
+                    style={{
+                      fontFamily: "monospace",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "4px",
+                      padding: "6px 8px",
+                      width: "100%",
+                      boxSizing: "border-box",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {selectedPath}
+                  </div>
                 </Field>
               </PanelSectionRow>
 
@@ -259,10 +282,9 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
           {operationResult && (
             <PanelSectionRow>
               <Field
-                label={wasSuccessful ? "Last action succeeded" : "Last action failed"}
-                description={wasSuccessful ? undefined : operationResult.output?.slice(0, 200)}
+                label={statusLabel ?? (wasSuccessful ? "Last action succeeded" : "Last action failed")}
               >
-                {statusMessage}
+                {!wasSuccessful && statusMessage ? statusMessage : null}
               </Field>
             </PanelSectionRow>
           )}
