@@ -3,6 +3,7 @@ import { ButtonItem, Field, PanelSectionRow, ToggleField } from "@decky/ui";
 import { FileSelectionType, openFilePicker } from "@decky/api";
 import { getPathDefaults, runManualPatch, runManualUnpatch } from "../api";
 import type { ApiResponse } from "../types/index";
+import { SmartClipboardButton } from "./SmartClipboardButton";
 
 interface PathDefaults {
   home: string;
@@ -34,6 +35,7 @@ const ensureDirectory = (value: string) => {
 
 interface ManualPatchControlsProps {
   isAvailable: boolean;
+  onManualModeChange?: (enabled: boolean) => void;
 }
 
 interface PickerState {
@@ -54,7 +56,7 @@ const formatResultMessage = (result: ApiResponse | null) => {
   return result.message || result.output || "Operation failed.";
 };
 
-export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) => {
+export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualPatchControlsProps) => {
   const [isEnabled, setEnabled] = useState(false);
   const [defaults, setDefaults] = useState<PathDefaults>(INITIAL_DEFAULTS);
   const [pickerState, setPickerState] = useState<PickerState>(INITIAL_PICKER_STATE);
@@ -96,8 +98,9 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
       setPickerState(INITIAL_PICKER_STATE);
       setOperationResult(null);
       setLastOperation(null);
+      onManualModeChange?.(false);
     }
-  }, [isAvailable]);
+  }, [isAvailable, onManualModeChange]);
 
   const canInteract = isAvailable && isEnabled;
   const selectedPath = pickerState.selectedPath;
@@ -184,6 +187,7 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
     }
 
     setEnabled(value);
+    onManualModeChange?.(value);
     if (!value) {
       setPickerState(INITIAL_PICKER_STATE);
       setOperationResult(null);
@@ -211,6 +215,10 @@ export const ManualPatchControls = ({ isAvailable }: ManualPatchControlsProps) =
 
       {canInteract && (
         <>
+          <SmartClipboardButton
+            command='WINEDLLOVERRIDES="dxgi=n,b" SteamDeck=0 %command%'
+            buttonText="Manual launch cmd"
+          />
           <PanelSectionRow>
             <ButtonItem
               layout="below"

@@ -22,6 +22,7 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
   const [uninstalling, setUninstalling] = useState(false);
   const [installResult, setInstallResult] = useState<OperationResult | null>(null);
   const [uninstallResult, setUninstallResult] = useState<OperationResult | null>(null);
+  const [manualModeEnabled, setManualModeEnabled] = useState(false);
   useEffect(() => {
     if (installResult) {
       return createAutoCleanupTimer(() => setInstallResult(null), TIMEOUTS.resultDisplay);
@@ -76,12 +77,18 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
       
       <OptiScalerHeader pathExists={pathExists} />
       
-      <ManualPatchControls isAvailable={pathExists === true} />
+      <ManualPatchControls
+        isAvailable={pathExists === true}
+        onManualModeChange={setManualModeEnabled}
+      />
 
-      <ClipboardCommands pathExists={pathExists} />
-      
-      <InstructionCard pathExists={pathExists} />
-      
+      {!manualModeEnabled && (
+        <>
+          <ClipboardCommands pathExists={pathExists} />
+          
+          <InstructionCard pathExists={pathExists} />
+        </>
+      )}
       <OptiScalerWiki pathExists={pathExists} />
       
       <UninstallButton 
