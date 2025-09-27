@@ -420,155 +420,194 @@ class Plugin:
             for file_name in required_files:
                 if not path.joinpath(file_name).exists():
                     return {"exists": False}
-            
+
             # Check plugins directory and OptiPatcher ASI
             plugins_dir = path / "plugins"
             if not plugins_dir.exists() or not (plugins_dir / "OptiPatcher.asi").exists():
                 return {"exists": False}
-                
+
             return {"exists": True}
         else:
             return {"exists": False}
 
-        def _resolve_target_directory(self, directory: str) -> Path:
-            target = Path(directory).expanduser()
-            if not target.exists():
-                raise FileNotFoundError(f"Target directory does not exist: {directory}")
-            if not target.is_dir():
-                raise NotADirectoryError(f"Target path is not a directory: {directory}")
-            if not os.access(target, os.W_OK | os.X_OK):
-                raise PermissionError(f"Insufficient permissions for {directory}")
-            return target
+    def _resolve_target_directory(self, directory: str) -> Path:
+        decky.logger.info(f"Resolving target directory: {directory}")
+        target = Path(directory).expanduser()
+        if not target.exists():
+            raise FileNotFoundError(f"Target directory does not exist: {directory}")
+        if not target.is_dir():
+            raise NotADirectoryError(f"Target path is not a directory: {directory}")
+        if not os.access(target, os.W_OK | os.X_OK):
+            raise PermissionError(f"Insufficient permissions for {directory}")
+        decky.logger.info(f"Resolved directory {directory} to absolute path {target}")
+        return target
 
-        def _manual_patch_directory_impl(self, directory: Path) -> dict:
-            fgmod_path = Path(decky.HOME) / "fgmod"
-            if not fgmod_path.exists():
-                return {
-                    "status": "error",
-                    "message": "OptiScaler bundle not installed. Run Install first.",
-                }
+    def _manual_patch_directory_impl(self, directory: Path) -> dict:
+        fgmod_path = Path(decky.HOME) / "fgmod"
+        if not fgmod_path.exists():
+            return {
+                "status": "error",
+                "message": "OptiScaler bundle not installed. Run Install first.",
+            }
 
-            optiscaler_dll = fgmod_path / "OptiScaler.dll"
-            if not optiscaler_dll.exists():
-                return {
-                    "status": "error",
-                    "message": "OptiScaler.dll not found in ~/fgmod. Reinstall OptiScaler.",
-                }
+        optiscaler_dll = fgmod_path / "OptiScaler.dll"
+        if not optiscaler_dll.exists():
+            return {
+                "status": "error",
+                "message": "OptiScaler.dll not found in ~/fgmod. Reinstall OptiScaler.",
+            }
 
-            dll_name = "dxgi.dll"
-            preserve_ini = True
+        dll_name = "dxgi.dll"
+        preserve_ini = True
 
-            try:
-                decky.logger.info(f"Manual patch started for {directory}")
+        try:
+            decky.logger.info(f"Manual patch started for {directory}")
 
-                for filename in INJECTOR_FILENAMES:
-                    path = directory / filename
-                    if path.exists():
+            removed_injectors = []
+            for filename in INJECTOR_FILENAMES:
+                path = directory / filename
+                if path.exists():
+                    path.unlink()
+                    removed_injectors.append(filename)
+            decky.logger.info(f"Removed injector DLLs: {removed_injectors}" if removed_injectors else "No injector DLLs found to remove")
+
+            backed_up_originals = []
+            for dll in ORIGINAL_DLL_BACKUPS:
+                source = directory / dll
+                backup = directory / f"{dll}.b"
+                if source.exists() and not backup.exists():
+                    shutil.move(source, backup)
+                    backed_up_originals.append(dll)
+            decky.logger.info(f"Backed up original DLLs: {backed_up_originals}" if backed_up_originals else "No original DLLs required backup")
+
+            removed_legacy = []
+            for legacy in ["nvapi64.dll", "nvapi64.dll.b"]:
+                legacy_path = directory / legacy
+                if legacy_path.exists():
+                    legacy_path.unlink()
+                    removed_legacy.append(legacy)
+            decky.logger.info(f"Removed legacy files: {removed_legacy}" if removed_legacy else "No legacy files to remove")
+
+            renamed = fgmod_path / "renames" / dll_name
+            destination_dll = directory / dll_name
+            source_for_copy = renamed if renamed.exists() else optiscaler_dll
+            shutil.copy2(source_for_copy, destination_dll)
+            decky.logger.info(f"Copied injector DLL from {source_for_copy} to {destination_dll}")
+
+            target_ini = directory / "OptiScaler.ini"
+            source_ini = fgmod_path / "OptiScaler.ini"
+            if preserve_ini and target_ini.exists():
+                decky.logger.info(f"Preserving existing OptiScaler.ini at {target_ini}")
+            elif source_ini.exists():
+                shutil.copy2(source_ini, target_ini)
+                decky.logger.info(f"Copied OptiScaler.ini from {source_ini} to {target_ini}")
+            else:
+                decky.logger.warning("No OptiScaler.ini found to copy")
+
+            plugins_src = fgmod_path / "plugins"
+            plugins_dest = directory / "plugins"
+            if plugins_src.exists():
+                shutil.copytree(plugins_src, plugins_dest, dirs_exist_ok=True)
+                decky.logger.info(f"Synced plugins directory from {plugins_src} to {plugins_dest}")
+            else:
+                decky.logger.warning("Plugins directory missing in fgmod bundle")
+
+            copied_support = []
+            missing_support = []
+            for filename in SUPPORT_FILES:
+                source = fgmod_path / filename
+                dest = directory / filename
+                if source.exists():
+                    shutil.copy2(source, dest)
+                    copied_support.append(filename)
+                else:
+                    missing_support.append(filename)
+            if copied_support:
+                decky.logger.info(f"Copied support files: {copied_support}")
+            if missing_support:
+                decky.logger.warning(f"Support files missing from fgmod bundle: {missing_support}")
+
+            decky.logger.info(f"Manual patch complete for {directory}")
+            return {
+                "status": "success",
+                "message": f"OptiScaler files copied to {directory}",
+            }
+
+        except PermissionError as exc:
+            decky.logger.error(f"Manual patch permission error: {exc}")
+            return {
+                "status": "error",
+                "message": f"Permission error while patching: {exc}",
+            }
+        except Exception as exc:
+            decky.logger.error(f"Manual patch failed: {exc}")
+            return {
+                "status": "error",
+                "message": f"Manual patch failed: {exc}",
+            }
+
+    def _manual_unpatch_directory_impl(self, directory: Path) -> dict:
+        try:
+            decky.logger.info(f"Manual unpatch started for {directory}")
+
+            removed_files = []
+            for filename in set(INJECTOR_FILENAMES + SUPPORT_FILES):
+                path = directory / filename
+                if path.exists():
+                    path.unlink()
+                    removed_files.append(filename)
+            decky.logger.info(f"Removed injector/support files: {removed_files}" if removed_files else "No injector/support files found to remove")
+
+            legacy_removed = []
+            for legacy in LEGACY_FILES:
+                path = directory / legacy
+                if path.exists():
+                    try:
                         path.unlink()
+                    except IsADirectoryError:
+                        shutil.rmtree(path, ignore_errors=True)
+                    legacy_removed.append(legacy)
+            decky.logger.info(f"Removed legacy artifacts: {legacy_removed}" if legacy_removed else "No legacy artifacts present")
 
-                for dll in ORIGINAL_DLL_BACKUPS:
-                    source = directory / dll
-                    backup = directory / f"{dll}.b"
-                    if source.exists() and not backup.exists():
-                        shutil.move(source, backup)
+            plugins_dir = directory / "plugins"
+            if plugins_dir.exists():
+                shutil.rmtree(plugins_dir, ignore_errors=True)
+                decky.logger.info(f"Removed plugins directory at {plugins_dir}")
 
-                for legacy in ["nvapi64.dll", "nvapi64.dll.b"]:
-                    legacy_path = directory / legacy
-                    if legacy_path.exists():
-                        legacy_path.unlink()
+            restored_backups = []
+            for dll in ORIGINAL_DLL_BACKUPS:
+                backup = directory / f"{dll}.b"
+                original = directory / dll
+                if backup.exists():
+                    if original.exists():
+                        original.unlink()
+                    shutil.move(backup, original)
+                    restored_backups.append(dll)
+            decky.logger.info(f"Restored backups: {restored_backups}" if restored_backups else "No backups found to restore")
 
-                renamed = fgmod_path / "renames" / dll_name
-                destination_dll = directory / dll_name
-                source_for_copy = renamed if renamed.exists() else optiscaler_dll
-                shutil.copy2(source_for_copy, destination_dll)
+            uninstaller = directory / "fgmod-uninstaller.sh"
+            if uninstaller.exists():
+                uninstaller.unlink()
+                decky.logger.info(f"Removed fgmod uninstaller at {uninstaller}")
 
-                target_ini = directory / "OptiScaler.ini"
-                source_ini = fgmod_path / "OptiScaler.ini"
-                if preserve_ini and target_ini.exists():
-                    decky.logger.info(f"Preserving existing OptiScaler.ini at {target_ini}")
-                elif source_ini.exists():
-                    shutil.copy2(source_ini, target_ini)
+            decky.logger.info(f"Manual unpatch complete for {directory}")
+            return {
+                "status": "success",
+                "message": f"OptiScaler files removed from {directory}",
+            }
 
-                plugins_src = fgmod_path / "plugins"
-                plugins_dest = directory / "plugins"
-                if plugins_src.exists():
-                    shutil.copytree(plugins_src, plugins_dest, dirs_exist_ok=True)
-
-                for filename in SUPPORT_FILES:
-                    source = fgmod_path / filename
-                    if source.exists():
-                        shutil.copy2(source, directory / filename)
-
-                decky.logger.info(f"Manual patch complete for {directory}")
-                return {
-                    "status": "success",
-                    "message": f"OptiScaler files copied to {directory}",
-                }
-
-            except PermissionError as exc:
-                decky.logger.error(f"Manual patch permission error: {exc}")
-                return {
-                    "status": "error",
-                    "message": f"Permission error while patching: {exc}",
-                }
-            except Exception as exc:
-                decky.logger.error(f"Manual patch failed: {exc}")
-                return {
-                    "status": "error",
-                    "message": f"Manual patch failed: {exc}",
-                }
-
-        def _manual_unpatch_directory_impl(self, directory: Path) -> dict:
-            try:
-                decky.logger.info(f"Manual unpatch started for {directory}")
-
-                for filename in set(INJECTOR_FILENAMES + SUPPORT_FILES):
-                    path = directory / filename
-                    if path.exists():
-                        path.unlink()
-
-                for legacy in LEGACY_FILES:
-                    path = directory / legacy
-                    if path.exists():
-                        try:
-                            path.unlink()
-                        except IsADirectoryError:
-                            shutil.rmtree(path, ignore_errors=True)
-
-                plugins_dir = directory / "plugins"
-                if plugins_dir.exists():
-                    shutil.rmtree(plugins_dir, ignore_errors=True)
-
-                for dll in ORIGINAL_DLL_BACKUPS:
-                    backup = directory / f"{dll}.b"
-                    original = directory / dll
-                    if backup.exists():
-                        if original.exists():
-                            original.unlink()
-                        shutil.move(backup, original)
-
-                uninstaller = directory / "fgmod-uninstaller.sh"
-                if uninstaller.exists():
-                    uninstaller.unlink()
-
-                decky.logger.info(f"Manual unpatch complete for {directory}")
-                return {
-                    "status": "success",
-                    "message": f"OptiScaler files removed from {directory}",
-                }
-
-            except PermissionError as exc:
-                decky.logger.error(f"Manual unpatch permission error: {exc}")
-                return {
-                    "status": "error",
-                    "message": f"Permission error while unpatching: {exc}",
-                }
-            except Exception as exc:
-                decky.logger.error(f"Manual unpatch failed: {exc}")
-                return {
-                    "status": "error",
-                    "message": f"Manual unpatch failed: {exc}",
-                }
+        except PermissionError as exc:
+            decky.logger.error(f"Manual unpatch permission error: {exc}")
+            return {
+                "status": "error",
+                "message": f"Permission error while unpatching: {exc}",
+            }
+        except Exception as exc:
+            decky.logger.error(f"Manual unpatch failed: {exc}")
+            return {
+                "status": "error",
+                "message": f"Manual unpatch failed: {exc}",
+            }
 
     async def list_installed_games(self) -> dict:
         try:
