@@ -21,3 +21,18 @@ export const listInstalledGames = callable<
 >("list_installed_games");
 
 export const logError = callable<[string], void>("log_error");
+
+export const getPathDefaults = callable<
+  [],
+  { home: string; steam_common?: string }
+>("get_path_defaults");
+
+export const runManualPatch = callable<
+  [string],
+  { status: string; message?: string; output?: string }
+>("manual_patch_directory");
+
+export const runManualUnpatch = callable<
+  [string],
+  { status: string; message?: string; output?: string }
+>("manual_unpatch_directory");

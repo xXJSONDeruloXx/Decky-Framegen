@@ -8,3 +8,4 @@ export { OptiScalerWiki } from './OptiScalerWiki';
 export { UninstallButton } from './UninstallButton';
 export { SmartClipboardButton } from './SmartClipboardButton';
 export { ResultDisplay } from './ResultDisplay';
+export { ManualPatchControls } from './CustomPathOverride';
