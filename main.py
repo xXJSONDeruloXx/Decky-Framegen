@@ -10,6 +10,10 @@ from pathlib import Path
 # Set to False or comment out this constant to skip the overwrite by default.
 UPSCALER_OVERWRITE_ENABLED = True
 
+# Toggle to enable overwriting the framegen DLL from the static remote binary.
+# Set to False or comment out this constant to skip the overwrite by default.
+FRAMEGEN_OVERWRITE_ENABLED = True
+
 INJECTOR_FILENAMES = [
     "dxgi.dll",
     "winmm.dll",
@@ -305,6 +309,24 @@ class Plugin:
                     decky.logger.info("Skipping upscaler DLL overwrite due to DECKY_SKIP_UPSCALER_OVERWRITE")
             except Exception as e:
                 decky.logger.error(f"Failed upscaler overwrite step: {e}")
+            
+            decky.logger.info("Starting framegen DLL overwrite check")
+            # Optionally overwrite amd_fidelityfx_framegeneration_dx12.dll with a newer static binary
+            # Toggle via env DECKY_SKIP_FRAMEGEN_OVERWRITE=true to skip.
+            try:
+                skip_overwrite = os.environ.get("DECKY_SKIP_FRAMEGEN_OVERWRITE", "false").lower() in ("1", "true", "yes")
+                if FRAMEGEN_OVERWRITE_ENABLED and not skip_overwrite:
+                    framegen_src = bin_path / "amd_fidelityfx_framegeneration_dx12.dll"
+                    framegen_dst = extract_path / "amd_fidelityfx_framegeneration_dx12.dll"
+                    if framegen_src.exists():
+                        shutil.copy2(framegen_src, framegen_dst)
+                        decky.logger.info("Overwrote amd_fidelityfx_framegeneration_dx12.dll with static remote binary")
+                    else:
+                        decky.logger.warning("amd_fidelityfx_framegeneration_dx12.dll not found in bin; skipping overwrite")
+                else:
+                    decky.logger.info("Skipping framegen DLL overwrite due to DECKY_SKIP_FRAMEGEN_OVERWRITE")
+            except Exception as e:
+                decky.logger.error(f"Failed framegen overwrite step: {e}")
             
             # Extract version from filename (e.g., OptiScaler_0.7.9.7z -> v0.7.9)
             version_match = optiscaler_archive.name.replace('.7z', '')
