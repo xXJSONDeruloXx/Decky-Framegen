@@ -63,6 +63,11 @@
       "name": "amd_fidelityfx_upscaler_dx12.dll"
     },
     {
+      "sha256hash": "3f5e674a59b400756e98ef31fd583a4eb08ad567ec8dee362886bc96e55ed347",
+      "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/fsr_sdk_2.1/amd_fidelityfx_framegeneration_dx12.dll",
+      "name": "amd_fidelityfx_framegeneration_dx12.dll"
+    },
+    {
       "sha256hash": "c4afb71d179894ac68874d48295e101fedb0dd8e10bcec29163760465706267c",
       "url": "https://github.com/optiscaler/OptiPatcher/releases/download/v0.30/OptiPatcher_v0.30.asi",
       "name": "OptiPatcher_v0.30.asi"
