@@ -152,16 +152,19 @@ class Plugin:
             return False
 
     async def extract_static_optiscaler(self) -> dict:
-        """Extract OptiScaler from the plugin's bin directory and copy additional files."""
+        """Extract OptiScaler to ~/fgmod/opti and int8 DLL to ~/fgmod/int8."""
         try:
-            decky.logger.info("Starting extract_static_optiscaler method")
+            decky.logger.info("Starting simplified extract_static_optiscaler method")
             
             # Set up paths
             bin_path = Path(decky.DECKY_PLUGIN_DIR) / "bin"
-            extract_path = Path(decky.HOME) / "fgmod"
+            fgmod_base = Path(decky.HOME) / "fgmod"
+            opti_path = fgmod_base / "opti"
+            int8_path = fgmod_base / "int8"
             
             decky.logger.info(f"Bin path: {bin_path}")
-            decky.logger.info(f"Extract path: {extract_path}")
+            decky.logger.info(f"OptiScaler extraction path: {opti_path}")
+            decky.logger.info(f"Int8 DLL path: {int8_path}")
             
             # Check if bin directory exists
             if not bin_path.exists():
@@ -188,22 +191,24 @@ class Plugin:
             
             decky.logger.info(f"Using archive: {optiscaler_archive}")
             
-            # Clean up existing directory
-            if extract_path.exists():
-                decky.logger.info(f"Removing existing directory: {extract_path}")
-                shutil.rmtree(extract_path)
+            # Clean up existing directories
+            if fgmod_base.exists():
+                decky.logger.info(f"Removing existing directory: {fgmod_base}")
+                shutil.rmtree(fgmod_base)
             
-            extract_path.mkdir(exist_ok=True)
-            decky.logger.info(f"Created extract directory: {extract_path}")
+            # Create directory structure
+            opti_path.mkdir(parents=True, exist_ok=True)
+            int8_path.mkdir(parents=True, exist_ok=True)
+            decky.logger.info(f"Created directory structure")
             
-            decky.logger.info(f"Extracting {optiscaler_archive.name} to {extract_path}")
+            decky.logger.info(f"Extracting {optiscaler_archive.name} to {opti_path}")
             
-            # Extract the 7z file
+            # Extract the 7z file to ~/fgmod/opti
             extract_cmd = [
                 "7z",
                 "x",
                 "-y",
-                "-o" + str(extract_path),
+                "-o" + str(opti_path),
                 str(optiscaler_archive)
             ]
             
@@ -234,79 +239,27 @@ class Plugin:
                     "message": f"Failed to extract OptiScaler archive: {extract_result.stderr}"
                 }
             
-            # Copy additional individual files from bin directory
-            # Note: v0.9.0-pre3+ includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
-            # Only copy files that aren't already in the archive (separate remote binaries)
-            additional_files = [
-                "nvngx.dll",  # nvidia dll from streamline sdk, not bundled in opti
-                "OptiPatcher_v0.30.asi"  # ASI plugin for OptiScaler spoofing
-            ]
+            # Copy int8 upscaler DLL to ~/fgmod/int8
+            decky.logger.info("Copying int8 upscaler DLL")
+            int8_src = bin_path / "amd_fidelityfx_upscaler_dx12.dll"
+            int8_dst = int8_path / "amd_fidelityfx_upscaler_dx12.dll"
             
-            decky.logger.info("Starting additional files copy")
-            for file_name in additional_files:
-                src_file = bin_path / file_name
-                dest_file = extract_path / file_name
-                
-                decky.logger.info(f"Checking for additional file: {file_name} at {src_file}")
-                if src_file.exists():
-                    shutil.copy2(src_file, dest_file)
-                    decky.logger.info(f"Copied additional file: {file_name}")
-                else:
-                    decky.logger.warning(f"Additional file not found: {file_name}")
-                    return {
-                        "status": "error",
-                        "message": f"Required file {file_name} not found in plugin bin directory"
-                    }
-            
-            decky.logger.info("Creating renamed copies of OptiScaler.dll")
-            # Create renamed copies of OptiScaler.dll
-            source_file = extract_path / "OptiScaler.dll"
-            renames_dir = extract_path / "renames"
-            self._create_renamed_copies(source_file, renames_dir)
+            if int8_src.exists():
+                shutil.copy2(int8_src, int8_dst)
+                decky.logger.info(f"Copied int8 DLL from {int8_src} to {int8_dst}")
+            else:
+                decky.logger.warning(f"Int8 DLL not found at {int8_src}")
+                return {
+                    "status": "error",
+                    "message": f"Required int8 DLL not found in plugin bin directory"
+                }
             
             decky.logger.info("Copying launcher scripts")
-            # Copy launcher scripts from assets
+            # Copy launcher scripts from assets to fgmod base
             assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
-            self._copy_launcher_scripts(assets_dir, extract_path)
-
-            decky.logger.info("Setting up ASI plugins directory")
-            # Create plugins directory and copy OptiPatcher ASI file
-            try:
-                plugins_dir = extract_path / "plugins"
-                plugins_dir.mkdir(exist_ok=True)
-                decky.logger.info(f"Created plugins directory: {plugins_dir}")
-                
-                # Copy OptiPatcher ASI file to plugins directory
-                asi_src = bin_path / "OptiPatcher_v0.30.asi"
-                asi_dst = plugins_dir / "OptiPatcher.asi"  # Rename to generic name
-                
-                if asi_src.exists():
-                    shutil.copy2(asi_src, asi_dst)
-                    decky.logger.info(f"Copied OptiPatcher ASI to plugins directory: {asi_dst}")
-                else:
-                    decky.logger.warning("OptiPatcher ASI file not found in bin directory")
-            except Exception as e:
-                decky.logger.error(f"Failed to setup ASI plugins directory: {e}")
-
-            decky.logger.info("Starting upscaler DLL overwrite check")
-            # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with a newer static binary
-            # Toggle via env DECKY_SKIP_UPSCALER_OVERWRITE=true to skip.
-            try:
-                skip_overwrite = os.environ.get("DECKY_SKIP_UPSCALER_OVERWRITE", "false").lower() in ("1", "true", "yes")
-                if UPSCALER_OVERWRITE_ENABLED and not skip_overwrite:
-                    upscaler_src = bin_path / "amd_fidelityfx_upscaler_dx12.dll"
-                    upscaler_dst = extract_path / "amd_fidelityfx_upscaler_dx12.dll"
-                    if upscaler_src.exists():
-                        shutil.copy2(upscaler_src, upscaler_dst)
-                        decky.logger.info("Overwrote amd_fidelityfx_upscaler_dx12.dll with static remote binary")
-                    else:
-                        decky.logger.warning("amd_fidelityfx_upscaler_dx12.dll not found in bin; skipping overwrite")
-                else:
-                    decky.logger.info("Skipping upscaler DLL overwrite due to DECKY_SKIP_UPSCALER_OVERWRITE")
-            except Exception as e:
-                decky.logger.error(f"Failed upscaler overwrite step: {e}")
+            self._copy_launcher_scripts(assets_dir, fgmod_base)
             
-            # Extract version from filename (e.g., OptiScaler_0.7.9.7z -> v0.7.9)
+            # Extract version from filename (e.g., Optiscaler_0.9.0-pre6.20251205.7z -> v0.9.0-pre6.20251205)
             version_match = optiscaler_archive.name.replace('.7z', '')
             if 'OptiScaler_' in version_match:
                 version = 'v' + version_match.split('OptiScaler_')[1]
@@ -315,8 +268,8 @@ class Plugin:
             else:
                 version = version_match
             
-            # Create version file
-            version_file = extract_path / "version.txt"
+            # Create version file in fgmod base
+            version_file = fgmod_base / "version.txt"
             try:
                 with open(version_file, 'w') as f:
                     f.write(version)
@@ -324,15 +277,10 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"Failed to create version file: {e}")
             
-            # Modify OptiScaler.ini to set FGType=nukems and Fsr4Update=true
-            decky.logger.info("Modifying OptiScaler.ini")
-            ini_file = extract_path / "OptiScaler.ini"
-            self._modify_optiscaler_ini(ini_file)
-            
-            decky.logger.info(f"Successfully completed extraction to ~/fgmod with version {version}")
+            decky.logger.info(f"Successfully completed extraction to ~/fgmod/opti with version {version}")
             return {
                 "status": "success",
-                "message": f"Successfully extracted OptiScaler {version} to ~/fgmod",
+                "message": f"Successfully extracted OptiScaler {version} to ~/fgmod/opti and int8 DLL to ~/fgmod/int8",
                 "version": version
             }
             
@@ -396,34 +344,31 @@ class Plugin:
 
     async def check_fgmod_path(self) -> dict:
         path = Path(decky.HOME) / "fgmod"
-        required_files = [
-            "OptiScaler.dll",
-            "OptiScaler.ini",
-            "dlssg_to_fsr3_amd_is_better.dll", 
-            "fakenvapi.dll",        # v0.9.0-pre3+ includes fakenvapi.dll in archive
-            "fakenvapi.ini", 
-            "nvngx.dll",
-            "amd_fidelityfx_dx12.dll",
-            "amd_fidelityfx_framegeneration_dx12.dll",
-            "amd_fidelityfx_upscaler_dx12.dll",
-            "amd_fidelityfx_vk.dll", 
-            "libxess.dll",
-            "libxess_dx11.dll",
-            "libxess_fg.dll",       # New in v0.9.0-pre4
-            "libxell.dll",          # New in v0.9.0-pre4
-            "fgmod",
-            "fgmod-uninstaller.sh"
-        ]
-
+        
         if path.exists():
-            # Check required files
+            # Check for opti subdirectory with OptiScaler files
+            opti_path = path / "opti"
+            if not opti_path.exists():
+                return {"exists": False}
+            
+            # Check for essential files in opti directory
+            required_files = [
+                "OptiScaler.dll",
+                "OptiScaler.ini",
+                "setup_linux.sh"
+            ]
+            
             for file_name in required_files:
-                if not path.joinpath(file_name).exists():
+                if not opti_path.joinpath(file_name).exists():
                     return {"exists": False}
-
-            # Check plugins directory and OptiPatcher ASI
-            plugins_dir = path / "plugins"
-            if not plugins_dir.exists() or not (plugins_dir / "OptiPatcher.asi").exists():
+            
+            # Check for int8 directory with upscaler DLL
+            int8_path = path / "int8"
+            if not int8_path.exists() or not (int8_path / "amd_fidelityfx_upscaler_dx12.dll").exists():
+                return {"exists": False}
+            
+            # Check for fgmod launcher script
+            if not (path / "fgmod").exists():
                 return {"exists": False}
 
             return {"exists": True}
