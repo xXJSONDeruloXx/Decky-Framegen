@@ -16,8 +16,8 @@ error_exit() {
 
 # === CONFIG ===
 fgmod_path="$HOME/fgmod"
-opti_path="$fgmod_path/opti"
-int8_path="$fgmod_path/int8"
+dll_name="${DLL:-dxgi.dll}"
+preserve_ini="${PRESERVE_INI:-true}"
 
 # === Resolve Game Path ===
 if [[ "$#" -lt 1 ]]; then
@@ -93,64 +93,83 @@ fi
 [[ ! -w "$exe_folder_path" ]] && error_exit "🛑 No write permission to the game folder!"
 
 logger -t fgmod "🟢 Target directory: $exe_folder_path"
+logger -t fgmod "🧩 Using DLL name: $dll_name"
+logger -t fgmod "📄 Preserve INI: $preserve_ini"
 
-# === Copy all OptiScaler files from ~/fgmod/opti to game directory ===
-echo "📦 Copying OptiScaler files from $opti_path to $exe_folder_path"
-if [[ ! -d "$opti_path" ]]; then
-  error_exit "❌ OptiScaler directory not found at $opti_path. Please run Setup OptiScaler first."
-fi
+# === Cleanup Old Injectors ===
+rm -f "$exe_folder_path"/{dxgi.dll,winmm.dll,nvngx.dll,_nvngx.dll,nvngx-wrapper.dll,dlss-enabler.dll,OptiScaler.dll}
 
-# Copy all files from opti directory to game directory
-cp -rf "$opti_path"/* "$exe_folder_path/" || error_exit "❌ Failed to copy OptiScaler files"
-echo "✅ Copied all OptiScaler files to game directory"
+# === Optional: Backup Original DLLs ===
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll")
+for dll in "${original_dlls[@]}"; do
+  [[ -f "$exe_folder_path/$dll" && ! -f "$exe_folder_path/$dll.b" ]] && mv -f "$exe_folder_path/$dll" "$exe_folder_path/$dll.b"
+done
 
-# === Copy int8 upscaler DLL if it exists ===
-if [[ -f "$int8_path/amd_fidelityfx_upscaler_dx12.dll" ]]; then
-  echo "📦 Copying int8 upscaler DLL to $exe_folder_path"
-  cp -f "$int8_path/amd_fidelityfx_upscaler_dx12.dll" "$exe_folder_path/" || true
-  echo "✅ Copied int8 upscaler DLL"
-fi
+# === Remove nvapi64.dll and its backup (conflicts from previous fakenvapi versions) ===
+rm -f "$exe_folder_path/nvapi64.dll" "$exe_folder_path/nvapi64.dll.b"
+echo "🧹 Cleaned up nvapi64.dll and backup (legacy fakenvapi conflicts)"
 
-# === Apply OptiScaler setup (what setup_linux.sh does) ===
-# We do this directly instead of running setup_linux.sh to avoid interaction issues
-echo "🔧 Setting up OptiScaler files"
-
-# Rename OptiScaler.dll to dxgi.dll (equivalent to selecting option 1)
-if [[ -f "$exe_folder_path/OptiScaler.dll" ]]; then
-  if [[ -f "$exe_folder_path/dxgi.dll" ]]; then
-    echo "⚠️ Removing existing dxgi.dll"
-    rm -f "$exe_folder_path/dxgi.dll"
-  fi
-  mv "$exe_folder_path/OptiScaler.dll" "$exe_folder_path/dxgi.dll"
-  echo "✅ Renamed OptiScaler.dll to dxgi.dll"
+# === Core Install ===
+if [[ -f "$fgmod_path/renames/$dll_name" ]]; then
+  echo "✅ Using pre-renamed $dll_name"
+  cp "$fgmod_path/renames/$dll_name" "$exe_folder_path/$dll_name" || error_exit "❌ Failed to copy $dll_name"
 else
-  echo "⚠️ OptiScaler.dll not found, may already be renamed"
+  echo "⚠️ Pre-renamed $dll_name not found, falling back to OptiScaler.dll"
+  cp "$fgmod_path/OptiScaler.dll" "$exe_folder_path/$dll_name" || error_exit "❌ Failed to copy OptiScaler.dll as $dll_name"
 fi
 
-# Disable spoofing for non-Nvidia (equivalent to answering 'n' then 'y')
-# The script asks: "Are you using Nvidia?" - we answer 'n'
-# Then asks: "Will you try to use DLSS inputs?" - we answer 'y' (enable spoofing)
-# Spoofing stays enabled (Dxgi=auto), so we don't need to change OptiScaler.ini
+# === OptiScaler.ini Handling ===
+if [[ "$preserve_ini" == "true" && -f "$exe_folder_path/OptiScaler.ini" ]]; then
+  echo "📄 Preserving existing OptiScaler.ini (user settings retained)"
+  logger -t fgmod "📄 Existing OptiScaler.ini preserved in $exe_folder_path"
+else
+  echo "📄 Installing OptiScaler.ini from plugin defaults"
+  cp "$fgmod_path/OptiScaler.ini" "$exe_folder_path/OptiScaler.ini" || error_exit "❌ Failed to copy OptiScaler.ini"
+  logger -t fgmod "📄 OptiScaler.ini installed to $exe_folder_path"
+fi
 
-# Clean up setup script and windows batch file
-rm -f "$exe_folder_path/setup_linux.sh" "$exe_folder_path/setup_windows.bat"
-rm -f "$exe_folder_path/!! EXTRACT ALL FILES TO GAME FOLDER !!"
+# === ASI Plugins Directory ===
+if [[ -d "$fgmod_path/plugins" ]]; then
+  echo "🔌 Installing ASI plugins directory"
+  cp -r "$fgmod_path/plugins" "$exe_folder_path/" || true
+  logger -t fgmod "🔌 ASI plugins directory installed to $exe_folder_path"
+else
+  echo "⚠️ No plugins directory found in fgmod"
+fi
 
-# Create uninstaller script (simplified version)
-cat > "$exe_folder_path/remove_optiscaler.sh" << 'UNINSTALL_EOF'
-#!/usr/bin/env bash
-echo "Removing OptiScaler files..."
-rm -f OptiScaler.log OptiScaler.ini dxgi.dll fakenvapi.dll fakenvapi.ini fakenvapi.log
-rm -f dlssg_to_fsr3_amd_is_better.dll dlssg_to_fsr3.log
-rm -rf D3D12_Optiscaler DlssOverrides Licenses
-echo "OptiScaler removed!"
-rm -f "$0"
-UNINSTALL_EOF
-chmod +x "$exe_folder_path/remove_optiscaler.sh"
+# === Supporting Libraries ===
+cp -f "$fgmod_path/libxess.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxess_dx11.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxess_fg.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/libxell.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/amd_fidelityfx_dx12.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/amd_fidelityfx_framegeneration_dx12.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/amd_fidelityfx_vk.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/nvngx.dll" "$exe_folder_path/" || true
 
-echo "✅ OptiScaler setup completed"
+# === Nukem FG Mod Files (now in fgmod directory) ===
+cp -f "$fgmod_path/dlssg_to_fsr3_amd_is_better.dll" "$exe_folder_path/" || true
+# Note: dlssg_to_fsr3.ini is not included in v0.9.0-pre4 archive
+
+# === FakeNVAPI Files ===
+# Remove legacy nvapi64.dll to avoid conflicts
+# rm -f "$exe_folder_path/nvapi64.dll"
+# echo "🧹 Removed legacy nvapi64.dll"
+
+# Copy fakenvapi.dll with original name (v1.3.8.1) 
+cp -f "$fgmod_path/fakenvapi.dll" "$exe_folder_path/" || true
+cp -f "$fgmod_path/fakenvapi.ini" "$exe_folder_path/" || true
+echo "📦 Installed fakenvapi.dll and fakenvapi.ini"
+
+# === Additional Support Files ===
+# cp -f "$fgmod_path/d3dcompiler_47.dll" "$exe_folder_path/" || true
+
+# Note: d3dcompiler_47.dll is not included in v0.9.0-pre4 archive
 
 echo "✅ Installation completed successfully!"
+echo "📄 For Steam, add this to the launch options: \"$fgmod_path/fgmod\" %COMMAND%"
+echo "📄 For Heroic, add this as a new wrapper: \"$fgmod_path/fgmod\""
 logger -t fgmod "🟢 Installation completed successfully for $exe_folder_path"
 
 # === Execute original command ===
@@ -165,9 +184,9 @@ if [[ $# -gt 1 ]]; then
   logger -t fgmod "Final executable path: $exe_folder_path"
   logger -t fgmod "=================="
   
-  # Execute the original command with proper environment variables
+  # Execute the original command
   export SteamDeck=0
-  export WINEDLLOVERRIDES="dxgi=n,b${WINEDLLOVERRIDES:+,$WINEDLLOVERRIDES}"
+  export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,dxgi=n,b"
   exec "$@"
 else
   echo "Done!"
@@ -179,4 +198,14 @@ else
   done
   echo "Final executable path: $exe_folder_path"
   echo "----------------------------------------"
+  
+  # Also log standalone mode to journal
+  logger -t fgmod "=================="
+  logger -t fgmod "Debug Info (Standalone Mode):"
+  logger -t fgmod "Number of arguments: $#"
+  for i in $(seq 1 $#); do
+    logger -t fgmod "Arg $i: ${!i}"
+  done
+  logger -t fgmod "Final executable path: $exe_folder_path"
+  logger -t fgmod "=================="
 fi
