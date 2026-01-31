@@ -26,7 +26,7 @@ export function InstalledGamesSection() {
           .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
         setGames(sortedGames);
       } else if (response) {
-        logError('fetchGames: ' + JSON.stringify(response));
+        void logError('fetchGames: ' + JSON.stringify(response));
         console.error('fetchGames: ' + JSON.stringify(response));
       }
     };
@@ -51,7 +51,7 @@ export function InstalledGamesSection() {
             await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
             setResult(`✓ Frame generation enabled for ${selectedGame.name}. Launch the game, enable DLSS in graphics settings, then press Insert to access OptiScaler options.`);
           } catch (error) {
-            logError('handlePatchClick: ' + String(error));
+            void logError('handlePatchClick: ' + String(error));
             setResult(error instanceof Error ? `Error: ${error.message}` : 'Error enabling frame generation');
           }
         }}
@@ -66,7 +66,7 @@ export function InstalledGamesSection() {
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
       setResult(`✓ Frame generation will be disabled on next launch of ${selectedGame.name}.`);
     } catch (error) {
-      logError('handleUnpatchClick: ' + String(error));
+      void logError('handleUnpatchClick: ' + String(error));
       setResult(error instanceof Error ? `Error: ${error.message}` : 'Error disabling frame generation');
     }
   };

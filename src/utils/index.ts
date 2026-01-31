@@ -23,7 +23,7 @@ export const safeAsyncOperation = async <T,>(
   try {
     return await operation();
   } catch (e) {
-    logError(`${errorContext}: ${String(e)}`);
+    void logError(`${errorContext}: ${String(e)}`);
     console.error(e);
     return undefined;
   }

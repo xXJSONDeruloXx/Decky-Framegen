@@ -158,7 +158,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualP
       if (!selectedPath) return;
 
       const setBusy = action === "patch" ? setIsPatching : setIsUnpatching;
-  setLastOperation(action);
+      setLastOperation(action);
       setBusy(true);
       setOperationResult(null);
 

@@ -19,6 +19,10 @@ fgmod_path="$HOME/fgmod"
 dll_name="${DLL:-dxgi.dll}"
 preserve_ini="${PRESERVE_INI:-true}"
 
+if [[ ! -d "$fgmod_path" ]]; then
+  error_exit "OptiScaler bundle not found at $fgmod_path. Install OptiScaler first."
+fi
+
 # === Resolve Game Path ===
 if [[ "$#" -lt 1 ]]; then
   error_exit "Usage: $0 program [program_arguments...]"

@@ -1,7 +1,6 @@
 import decky
 import os
 import subprocess
-import json
 import shutil
 import re
 from pathlib import Path
@@ -70,7 +69,7 @@ class Plugin:
     def _create_renamed_copies(self, source_file, renames_dir):
         """Create renamed copies of the OptiScaler.dll file"""
         try:
-            renames_dir.mkdir(exist_ok=True)
+            renames_dir.mkdir(parents=True, exist_ok=True)
             
             rename_files = [
                 "dxgi.dll",
@@ -124,7 +123,7 @@ class Plugin:
         """Modify OptiScaler.ini to set FGType=nukems, Fsr4Update=true, and ASI plugin settings"""
         try:
             if ini_file.exists():
-                with open(ini_file, 'r') as f:
+                with open(ini_file, 'r', encoding='utf-8', errors='replace') as f:
                     content = f.read()
                 
                 # Replace FGType=auto with FGType=nukems
@@ -139,7 +138,7 @@ class Plugin:
                 # Replace Path=auto with Path=plugins
                 updated_content = re.sub(r'Path\s*=\s*auto', 'Path=plugins', updated_content)
                 
-                with open(ini_file, 'w') as f:
+                with open(ini_file, 'w', encoding='utf-8') as f:
                     f.write(updated_content)
                 
                 decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins")
@@ -262,12 +261,14 @@ class Plugin:
             # Create renamed copies of OptiScaler.dll
             source_file = extract_path / "OptiScaler.dll"
             renames_dir = extract_path / "renames"
-            self._create_renamed_copies(source_file, renames_dir)
+            if not self._create_renamed_copies(source_file, renames_dir):
+                decky.logger.warning("Renamed copies were not created successfully")
             
             decky.logger.info("Copying launcher scripts")
             # Copy launcher scripts from assets
             assets_dir = Path(decky.DECKY_PLUGIN_DIR) / "assets"
-            self._copy_launcher_scripts(assets_dir, extract_path)
+            if not self._copy_launcher_scripts(assets_dir, extract_path):
+                decky.logger.warning("Launcher scripts were not copied successfully")
 
             decky.logger.info("Setting up ASI plugins directory")
             # Create plugins directory and copy OptiPatcher ASI file
@@ -318,7 +319,7 @@ class Plugin:
             # Create version file
             version_file = extract_path / "version.txt"
             try:
-                with open(version_file, 'w') as f:
+                with open(version_file, 'w', encoding='utf-8') as f:
                     f.write(version)
                 decky.logger.info(f"Created version file: {version}")
             except Exception as e:
@@ -635,7 +636,7 @@ class Plugin:
                     game_info = {"appid": "", "name": ""}
 
                     try:
-                        with open(appmanifest, "r", encoding="utf-8") as file:
+                        with open(appmanifest, "r", encoding="utf-8", errors="replace") as file:
                             for line in file:
                                 if '"appid"' in line:
                                     game_info["appid"] = line.split('"appid"')[1].strip().strip('"')
@@ -643,8 +644,6 @@ class Plugin:
                                     game_info["name"] = line.split('"name"')[1].strip().strip('"')
                     except UnicodeDecodeError as e:
                         decky.logger.error(f"Skipping {appmanifest} due to encoding issue: {e}")
-                    finally:
-                        pass  # Ensures loop continues even if an error occurs
 
                     if game_info["appid"] and game_info["name"]:
                         games.append(game_info)

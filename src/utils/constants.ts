@@ -1,16 +1,3 @@
-// Common types for the application
-
-export interface ResultType {
-  status: string;
-  message?: string;
-  output?: string;
-}
-
-export interface GameType {
-  appid: number;
-  name: string;
-}
-
 // Common style definitions
 export const STYLES = {
   resultBox: {
