@@ -187,6 +187,7 @@ if [[ $# -gt 1 ]]; then
   # Execute the original command
   export SteamDeck=0
   export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,dxgi=n,b"
+  exec >/dev/null 2>&1
   exec "$@"
 else
   echo "Done!"
