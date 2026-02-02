@@ -168,6 +168,12 @@ if [[ $# -gt 1 ]]; then
   # Execute the original command with proper environment variables
   export SteamDeck=0
   export WINEDLLOVERRIDES="dxgi=n,b${WINEDLLOVERRIDES:+,$WINEDLLOVERRIDES}"
+  
+  # Filter out leading -- separators (from Steam launch options)
+  while [[ $# -gt 0 && "$1" == "--" ]]; do
+    shift
+  done
+  
   exec "$@"
 else
   echo "Done!"
