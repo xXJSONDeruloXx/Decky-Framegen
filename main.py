@@ -420,7 +420,7 @@ class Plugin:
             "libxess_fg.dll",       # New in v0.9.0-pre4
             "libxell.dll",          # New in v0.9.0-pre4
             "fgmod",
-            "fgmod-uninstaller.sh"
+            "fgmod-uninstaller.sh",
             "update-optiscaler-config.py"
         ]
 
