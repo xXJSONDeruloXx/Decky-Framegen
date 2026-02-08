@@ -114,6 +114,14 @@ class Plugin:
                 shutil.copy2(uninstaller_src, uninstaller_dest)
                 uninstaller_dest.chmod(0o755)
                 decky.logger.info(f"Copied uninstaller script to {uninstaller_dest}")
+
+            # Copy optiscaler config updater script
+            optiscaler_config_updater_src = assets_dir / "update-optiscaler-config.py"
+            optiscaler_config_updater_dest = extract_path / "update-optiscaler-config.py"
+            if optiscaler_config_updater_src.exists():
+                shutil.copy2(optiscaler_config_updater_src, optiscaler_config_updater_dest)
+                optiscaler_config_updater_dest.chmod(0o755)
+                decky.logger.info(f"Copied update-optiscaler-config.py script to {optiscaler_config_updater_dest}")
                 
             return True
         except Exception as e:
@@ -413,6 +421,7 @@ class Plugin:
             "libxell.dll",          # New in v0.9.0-pre4
             "fgmod",
             "fgmod-uninstaller.sh"
+            "update-optiscaler-config.py"
         ]
 
         if path.exists():

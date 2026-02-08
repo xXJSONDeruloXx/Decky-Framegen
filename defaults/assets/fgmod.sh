@@ -128,6 +128,11 @@ else
   logger -t fgmod "📄 OptiScaler.ini installed to $exe_folder_path"
 fi
 
+# === OptiScaler env variables Handling ===
+if command -v python &> /dev/null && [ -f "$fgmod_path/update-optiscaler-config.py" ]; then
+  python "$fgmod_path/update-optiscaler-config.py" "$exe_folder_path/OptiScaler.ini"
+fi
+
 # === ASI Plugins Directory ===
 if [[ -d "$fgmod_path/plugins" ]]; then
   echo "🔌 Installing ASI plugins directory"
