@@ -23,7 +23,6 @@ def update_optiscaler_config(file_path):
         key_target = parts[2]
 
         found_section = False
-        updated_key = False
 
         # Regex to match [Section] and Key=Value
         section_pattern = re.compile(rf'^\s*\[{re.escape(section_target)}\]\s*')
@@ -42,18 +41,8 @@ def update_optiscaler_config(file_path):
             # Replace the value if the key is found within the correct section
             if found_section and key_pattern.match(line):
                 lines[i] = key_pattern.sub(r'\1=' + env_value, line)
-                updated_key = True
                 print(f"Updated: [{section_target}] {key_target} = {env_value}")
                 break
-
-        # If section exists but key doesn't, append key to the end of the section
-        # Not really needed but supported just in case
-        if found_section and not updated_key:
-            for i, line in enumerate(lines):
-                if section_pattern.match(line):
-                    lines.insert(i + 1, f"{key_target}={env_value}\n")
-                    print(f"Added new key: [{section_target}] {key_target} = {env_value}")
-                    break
 
     # Write the modified content back
     with open(file_path, 'w') as f:
