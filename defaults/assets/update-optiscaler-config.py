@@ -12,12 +12,12 @@ def update_optiscaler_config(file_path):
         lines = f.readlines()
 
     config = ConfigParser()
+    config.optionxform = str  # Preserve case for keys (otherwise PATH could match Path)
     config.read(file_path)
 
     # Because we want to support unprefixed env variables, we need to count key occurrences across all sections of the ini file
     # Keys that appear multiple times should be prefixed like Section_Key by the user for them to be targeted properly
 
-    # Note: keys returned by configparser are in lowercase
     key_occurrences = {}
     key_to_sections = {}
     for section in config.sections():
@@ -26,9 +26,6 @@ def update_optiscaler_config(file_path):
             if key not in key_to_sections:
                 key_to_sections[key] = []
             key_to_sections[key].append(section)
-
-    print(key_occurrences)
-    print(key_to_sections)
 
     env_updates = []
 
@@ -52,9 +49,9 @@ def update_optiscaler_config(file_path):
                 env_updates.append(('section_key', section, key, env_value, env_name))
                 continue
 
-        # Try Key format
-        if env_name.lower() in key_occurrences and key_occurrences[env_name.lower()] == 1:
-            section = key_to_sections[env_name.lower()][0]
+        # Try Key format (only if key appears exactly once across all sections)
+        if env_name in key_occurrences and key_occurrences[env_name] == 1:
+            section = key_to_sections[env_name][0]
             env_updates.append(('key', section, env_name, env_value, env_name))
 
     print(f"Found {len(env_updates)} updates to apply")
@@ -64,8 +61,8 @@ def update_optiscaler_config(file_path):
     for update_type, section_target, key_target, env_value, env_name in env_updates:
         found_section = False
 
-        # Regex to match [Section] and Key=Value
-        section_pattern = re.compile(rf'^\s*\[{re.escape(section_target)}\]\s*')
+        # Regex to match [Section] and Key=Value (case-sensitive)
+        section_pattern = re.compile(rf'^\s*\[{re.escape(section_target)}]\s*')
         key_pattern = re.compile(rf'^(\s*{re.escape(key_target)}\s*)=.*')
 
         for i, line in enumerate(lines):
