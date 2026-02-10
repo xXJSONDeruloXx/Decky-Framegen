@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+from configparser import ConfigParser
 
 def update_optiscaler_config(file_path):
     if not os.path.exists(file_path):
@@ -10,18 +11,57 @@ def update_optiscaler_config(file_path):
     with open(file_path, 'r') as f:
         lines = f.readlines()
 
-    # Get environment variables starting with OptiScaler_
-    env_vars = {k: v for k, v in os.environ.items() if k.startswith("OptiScaler_")}
+    config = ConfigParser()
+    config.read(file_path)
 
-    for env_name, env_value in env_vars.items():
-        # Split OptiScaler_Section_Key
+    # Because we want to support unprefixed env variables, we need to count key occurrences across all sections of the ini file
+    # Keys that appear multiple times should be prefixed like Section_Key by the user for them to be targeted properly
+
+    # Note: keys returned by configparser are in lowercase
+    key_occurrences = {}
+    key_to_sections = {}
+    for section in config.sections():
+        for key in config.options(section):
+            key_occurrences[key] = key_occurrences.get(key, 0) + 1
+            if key not in key_to_sections:
+                key_to_sections[key] = []
+            key_to_sections[key].append(section)
+
+    print(key_occurrences)
+    print(key_to_sections)
+
+    env_updates = []
+
+    # Handle OptiScaler_Section_Key format
+    optiscaler_vars = {k: v for k, v in os.environ.items() if k.startswith("OptiScaler_")}
+    for env_name, env_value in optiscaler_vars.items():
         parts = env_name.split('_', 2)
-        if len(parts) < 3:
-            continue
+        if len(parts) >= 3:
+            env_updates.append(('optiscaler', parts[1], parts[2], env_value, env_name))
 
-        section_target = parts[1]
-        key_target = parts[2]
+    # Handle Section_Key and Key formats
+    other_vars = {k: v for k, v in os.environ.items() if not k.startswith("OptiScaler_")}
+    for env_name, env_value in other_vars.items():
+        # Try Section_Key format
+        if '_' in env_name:
+            parts = env_name.split('_', 1)
+            section = parts[0]
+            key = parts[1]
+            # Check if this section exists and has this key
+            if config.has_section(section) and config.has_option(section, key):
+                env_updates.append(('section_key', section, key, env_value, env_name))
+                continue
 
+        # Try Key format
+        if env_name.lower() in key_occurrences and key_occurrences[env_name.lower()] == 1:
+            section = key_to_sections[env_name.lower()][0]
+            env_updates.append(('key', section, env_name, env_value, env_name))
+
+    print(f"Found {len(env_updates)} updates to apply")
+    for entry in env_updates:
+        print(f"> {entry}")
+
+    for update_type, section_target, key_target, env_value, env_name in env_updates:
         found_section = False
 
         # Regex to match [Section] and Key=Value
@@ -41,7 +81,7 @@ def update_optiscaler_config(file_path):
             # Replace the value if the key is found within the correct section
             if found_section and key_pattern.match(line):
                 lines[i] = key_pattern.sub(r'\1=' + env_value, line)
-                print(f"Updated: [{section_target}] {key_target} = {env_value}")
+                print(f"Updated: [{section_target}] {key_target} = {env_value} (from {env_name})")
                 break
 
     # Write the modified content back
