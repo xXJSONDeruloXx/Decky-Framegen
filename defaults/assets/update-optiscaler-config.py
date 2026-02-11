@@ -18,9 +18,19 @@ def update_optiscaler_config(file_path):
     # Because we want to support unprefixed env variables, we need to count key occurrences across all sections of the ini file
     # Keys that appear multiple times should be prefixed like Section_Key by the user for them to be targeted properly
 
+    # Normalize section names: strip - and . so V-Sync becomes VSync
+    # This allows env vars like VSync_Key to match INI section [V-Sync]
+    def normalize_section(section_name):
+        return section_name.replace('-', '').replace('.', '')
+
     key_occurrences = {}
     key_to_sections = {}
+    section_normalized_to_actual = {}  # Maps normalized section name to actual section name
+
     for section in config.sections():
+        normalized = normalize_section(section)
+        section_normalized_to_actual[normalized] = section
+
         for key in config.options(section):
             key_occurrences[key] = key_occurrences.get(key, 0) + 1
             if key not in key_to_sections:
@@ -42,12 +52,20 @@ def update_optiscaler_config(file_path):
         # Try Section_Key format
         if '_' in env_name:
             parts = env_name.split('_', 1)
-            section = parts[0]
+            section_from_env = parts[0]
             key = parts[1]
-            # Check if this section exists and has this key
-            if config.has_section(section) and config.has_option(section, key):
-                env_updates.append(('section_key', section, key, env_value, env_name))
+
+            # Try exact section match first
+            if config.has_section(section_from_env) and config.has_option(section_from_env, key):
+                env_updates.append(('section_key', section_from_env, key, env_value, env_name))
                 continue
+
+            # Try section match with normalized section names
+            if section_from_env in section_normalized_to_actual:
+                actual_section = section_normalized_to_actual[section_from_env]
+                if config.has_option(actual_section, key):
+                    env_updates.append(('section_key', actual_section, key, env_value, env_name))
+                    continue
 
         # Try Key format (only if key appears exactly once across all sections)
         if env_name in key_occurrences and key_occurrences[env_name] == 1:
