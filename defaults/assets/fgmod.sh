@@ -129,7 +129,7 @@ else
 fi
 
 # === OptiScaler env variables Handling ===
-if command -v python &> /dev/null && [ -f "$fgmod_path/update-optiscaler-config.py" ]; then
+if [[ -f "$fgmod_path/update-optiscaler-config.py" ]]; then
   python "$fgmod_path/update-optiscaler-config.py" "$exe_folder_path/OptiScaler.ini"
 fi
 
