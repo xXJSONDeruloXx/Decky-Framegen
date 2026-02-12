@@ -35,6 +35,46 @@ This plugin uses OptiScaler to replace DLSS calls with FSR3/FSR3.1, giving you:
 - Click "Copy Unpatch Command" and replace the launch options with: `~/fgmod/fgmod-uninstaller.sh %command%`
 - Run the game at least once to make the uninstaller script run. After you can leave the launch option or remove it
 
+### Configuring OptiScaler via Environment Variables
+Starting v0.14.0, you can update OptiScaler settings before a game launches by adding environment variables. 
+This is useful if you plan to use the same settings across multiple games so they are pre-configured by the time you launch them.
+
+For example, considering the following sample from the OptiScaler.ini config file:
+```
+[Upscalers]
+Dx11Upscaler=auto
+Dx12Upscaler=auto
+VulkanUpscaler=auto
+
+[FrameGen]
+Enabled=auto
+FGInput=auto
+FGOutput=auto
+DebugView=auto
+DrawUIOverFG=auto
+```
+We can decide to set `Dx12Upscaler=fsr31` to enable FSR4 in DX12 games by default. This works because the option name `Dx12Upscaler` is unique throughout the file but for options that appear multiple times like `Enabled`, you can prefix the option name with the section name like `FrameGen_Enabled=true`.
+You can provide section names for all options if you want to be explicit. You can also prefix `Section_Option` with `OptiScaler` to ensure no conflict with other commands.
+
+Here's the breakdown of supported formats:
+- `OptiScaler_Section_Option=value` - Full format (foolproof)
+- `Section_Option=value` - Short format (recommended)
+- `Option=value` - Minimal format (only works if the option name appears once in OptiScaler.ini)
+
+**Example:**
+```bash
+# Enable frame generation with XeFG output
+FrameGen_Enabled=true FGInput=fsrfg FGOutput=xefg ~/fgmod/fgmod %command%
+
+# Set DX12 upscaler to FSR 3.1 (Upgrades to FSR4)
+Dx12Upscaler=fsr31 ~/fgmod/fgmod %command%
+```
+
+**Notes:**
+- Environment variables override the OptiScaler.ini file on each game launch
+- Hyphenated section names like `[V-Sync]` can be accessed like `VSync_Option=value`
+- If an option name appears in multiple sections of the OptiScaler.ini file, use the `Section_Option` or `OptiScaler_Section_Option` format
+
 ## Technical Details
 
 ### What's Included
