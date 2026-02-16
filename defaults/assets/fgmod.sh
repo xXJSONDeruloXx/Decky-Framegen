@@ -68,7 +68,7 @@ for arg in "$@"; do
     fi
 
     # Extract executable path from YAML
-    exe_path=$(grep -E '^\s*exe:' "$config_file" | sed 's/.*exe:[[:space:]]*//')
+    exe_path=$(grep -E '^\s*exe:' "$config_file" | sed 's/.*exe:[[:space:]]*//' )
 
     if [[ -n "$exe_path" ]]; then
       exe_folder_path=$(dirname "$exe_path")
@@ -192,7 +192,13 @@ if [[ $# -gt 1 ]]; then
   # Execute the original command
   export SteamDeck=0
   export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,dxgi=n,b"
-  exec "$@"
+
+  # Filter out leading -- separators (from Steam launch options)
+  while [[ $# -gt 0 && "$1" == "--" ]]; do
+    shift
+  done
+
+  "$@"
 else
   echo "Done!"
   echo "----------------------------------------"
