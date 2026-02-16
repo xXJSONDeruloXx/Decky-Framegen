@@ -168,6 +168,7 @@ if [[ $# -gt 1 ]]; then
   echo "🚀 Launching the game..."
   export SteamDeck=0
   export WINEDLLOVERRIDES="${WINEDLLOVERRIDES},dxgi=n,b"
+  exec >/dev/null 2>&1
   exec "$@"
 else
   echo "✅ Uninstallation complete. No game specified to run."
