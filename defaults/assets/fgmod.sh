@@ -198,6 +198,7 @@ if [[ $# -gt 1 ]]; then
     shift
   done
 
+  exec >/dev/null 2>&1
   "$@"
 else
   echo "Done!"
