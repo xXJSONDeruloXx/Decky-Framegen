@@ -115,8 +115,16 @@ rm -f "nvapi64.dll" "fakenvapi.ini" "fakenvapi.log"
 
 # === Remove Supporting Libraries ===
 echo "🧹 Removing supporting libraries..."
-rm -f "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll" "nvngx.dll" "nvngx.ini"
-rm -f "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll"
+rm -f "nvngx.dll" "nvngx.ini"
+# Only remove files if backups exist (to avoid removing restored originals)
+[[ -f "libxess.dll.b" ]] && rm -f "libxess.dll"
+[[ -f "libxess_dx11.dll.b" ]] && rm -f "libxess_dx11.dll"
+[[ -f "libxess_fg.dll.b" ]] && rm -f "libxess_fg.dll"
+[[ -f "libxell.dll.b" ]] && rm -f "libxell.dll"
+[[ -f "amd_fidelityfx_dx12.dll.b" ]] && rm -f "amd_fidelityfx_dx12.dll"
+[[ -f "amd_fidelityfx_framegeneration_dx12.dll.b" ]] && rm -f "amd_fidelityfx_framegeneration_dx12.dll"
+[[ -f "amd_fidelityfx_upscaler_dx12.dll.b" ]] && rm -f "amd_fidelityfx_upscaler_dx12.dll"
+[[ -f "amd_fidelityfx_vk.dll.b" ]] && rm -f "amd_fidelityfx_vk.dll"
 
 # === Remove FG Mod Files ===
 echo "🧹 Removing frame generation mod files..."

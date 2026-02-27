@@ -68,7 +68,7 @@ for arg in "$@"; do
     fi
 
     # Extract executable path from YAML
-    exe_path=$(grep -E '^\s*exe:' "$config_file" | sed 's/.*exe:[[:space:]]*//')
+    exe_path=$(grep -E '^\s*exe:' "$config_file" | sed 's/.*exe:[[:space:]]*//' )
 
     if [[ -n "$exe_path" ]]; then
       exe_folder_path=$(dirname "$exe_path")
@@ -126,6 +126,11 @@ else
   echo "📄 Installing OptiScaler.ini from plugin defaults"
   cp "$fgmod_path/OptiScaler.ini" "$exe_folder_path/OptiScaler.ini" || error_exit "❌ Failed to copy OptiScaler.ini"
   logger -t fgmod "📄 OptiScaler.ini installed to $exe_folder_path"
+fi
+
+# === OptiScaler env variables Handling ===
+if [[ -f "$fgmod_path/update-optiscaler-config.py" ]]; then
+  python "$fgmod_path/update-optiscaler-config.py" "$exe_folder_path/OptiScaler.ini"
 fi
 
 # === ASI Plugins Directory ===
@@ -187,8 +192,14 @@ if [[ $# -gt 1 ]]; then
   # Execute the original command
   export SteamDeck=0
   export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,dxgi=n,b"
+
+  # Filter out leading -- separators (from Steam launch options)
+  while [[ $# -gt 0 && "$1" == "--" ]]; do
+    shift
+  done
+
   exec >/dev/null 2>&1
-  exec "$@"
+  "$@"
 else
   echo "Done!"
   echo "----------------------------------------"
