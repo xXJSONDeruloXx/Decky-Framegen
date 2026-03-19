@@ -36,7 +36,7 @@ This plugin uses OptiScaler to replace DLSS calls with FSR3/FSR3.1, giving you:
 - Run the game at least once to make the uninstaller script run. After you can leave the launch option or remove it
 
 ### Configuring OptiScaler via Environment Variables
-Starting v0.14.0, you can update OptiScaler settings before a game launches by adding environment variables. 
+Starting v0.15.0-pre.1, you can update OptiScaler settings before a game launches by adding environment variables. 
 This is useful if you plan to use the same settings across multiple games so they are pre-configured by the time you launch them.
 
 For example, considering the following sample from the OptiScaler.ini config file:
@@ -78,7 +78,7 @@ Dx12Upscaler=fsr31 ~/fgmod/fgmod %command%
 ## Technical Details
 
 ### What's Included
-- **[OptiScaler_v0.7.9](https://github.com/optiscaler/OptiScaler/releases/tag/v0.7.9)**: Latest bleeding-edge build (as of writing), with new features such as OptiFG for adding FG to games without any FG (highly experimental)
+- **[OptiScaler 0.9.0-pre11](https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/tag/opti-9-pre-11)**: Bleeding-edge OptiScaler bundle used by this plugin, paired with the RDNA2-optimized `amd_fidelityfx_upscaler_dx12.dll` override for Steam Deck compatibility
 - **Nukem9's DLSSG to FSR3 mod**: Allows use of DLSS inputs for FSR frame gen outputs, and xess or FSR upscaling outputs
 - **FakeNVAPI**: NVIDIA API emulation for AMD/Intel GPUs, to make DLSS options selectable in game
 - **Supporting Libraries**: All required DX12/Vulkan libraries (libxess.dll, amd_fidelityfx, etc.)

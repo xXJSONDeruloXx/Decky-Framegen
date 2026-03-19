@@ -297,7 +297,8 @@ class Plugin:
                 decky.logger.error(f"Failed to setup ASI plugins directory: {e}")
 
             decky.logger.info("Starting upscaler DLL overwrite check")
-            # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with a newer static binary
+            # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with the separately bundled
+            # RDNA2-optimized static binary used for Steam Deck compatibility.
             # Toggle via env DECKY_SKIP_UPSCALER_OVERWRITE=true to skip.
             try:
                 skip_overwrite = os.environ.get("DECKY_SKIP_UPSCALER_OVERWRITE", "false").lower() in ("1", "true", "yes")
