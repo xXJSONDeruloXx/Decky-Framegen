@@ -150,7 +150,7 @@ class Plugin:
             return False
 
     def _modify_optiscaler_ini(self, ini_file):
-        """Modify OptiScaler.ini to set FG defaults, ASI plugin settings, and safe font defaults."""
+        """Modify OptiScaler.ini to set FG defaults, ASI plugin settings, and Steam Deck template defaults."""
         try:
             if ini_file.exists():
                 with open(ini_file, 'r') as f:
@@ -168,13 +168,15 @@ class Plugin:
                 # Replace Path=auto with Path=plugins
                 updated_content = re.sub(r'Path\s*=\s*auto', 'Path=plugins', updated_content)
 
-                # Disable new HQ font auto mode to avoid missing font assertions on Proton
+                # Steam Deck template defaults for fresh fgmod installs only.
+                updated_content = re.sub(r'Dx11Upscaler\s*=\s*auto', 'Dx11Upscaler=fsr31_12', updated_content)
+                updated_content = re.sub(r'Dx12Upscaler\s*=\s*auto', 'Dx12Upscaler=fsr31', updated_content)
                 updated_content = re.sub(r'UseHQFont\s*=\s*auto', 'UseHQFont=false', updated_content)
                 
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
                 
-                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins, UseHQFont=false")
+                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins, Dx11Upscaler=fsr31_12, Dx12Upscaler=fsr31, UseHQFont=false")
                 return True
             else:
                 decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")

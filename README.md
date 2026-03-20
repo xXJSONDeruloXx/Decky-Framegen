@@ -74,6 +74,7 @@ Dx12Upscaler=fsr31 ~/fgmod/fgmod %command%
 - Environment variables override the OptiScaler.ini file on each game launch
 - Hyphenated section names like `[V-Sync]` can be accessed like `VSync_Option=value`
 - If an option name appears in multiple sections of the OptiScaler.ini file, use the `Section_Option` or `OptiScaler_Section_Option` format
+- During Decky Framegen setup, the shared `~/fgmod/OptiScaler.ini` template is initialized with `Dx11Upscaler=fsr31_12` and `Dx12Upscaler=fsr31` for Steam Deck-friendly defaults; per-game launch does not keep forcing those values afterward
 
 ## Technical Details
 
