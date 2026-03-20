@@ -128,8 +128,29 @@ class Plugin:
             decky.logger.error(f"Failed to copy launcher scripts: {e}")
             return False
     
+    def _disable_hq_font_auto(self, ini_file):
+        """Disable the new HQ font auto mode to avoid missing font assertions on Wine/Proton."""
+        try:
+            if not ini_file.exists():
+                decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
+                return False
+
+            with open(ini_file, 'r') as f:
+                content = f.read()
+
+            updated_content = re.sub(r'UseHQFont\s*=\s*auto', 'UseHQFont=false', content)
+            if updated_content != content:
+                with open(ini_file, 'w') as f:
+                    f.write(updated_content)
+                decky.logger.info("Set UseHQFont=false to avoid missing font assertions")
+
+            return True
+        except Exception as e:
+            decky.logger.error(f"Failed to update HQ font setting in OptiScaler.ini: {e}")
+            return False
+
     def _modify_optiscaler_ini(self, ini_file):
-        """Modify OptiScaler.ini to set FGType=nukems, Fsr4Update=true, and ASI plugin settings"""
+        """Modify OptiScaler.ini to set FG defaults, ASI plugin settings, and safe font defaults."""
         try:
             if ini_file.exists():
                 with open(ini_file, 'r') as f:
@@ -146,11 +167,14 @@ class Plugin:
                 
                 # Replace Path=auto with Path=plugins
                 updated_content = re.sub(r'Path\s*=\s*auto', 'Path=plugins', updated_content)
+
+                # Disable new HQ font auto mode to avoid missing font assertions on Proton
+                updated_content = re.sub(r'UseHQFont\s*=\s*auto', 'UseHQFont=false', updated_content)
                 
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
                 
-                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins")
+                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins, UseHQFont=false")
                 return True
             else:
                 decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
@@ -297,7 +321,8 @@ class Plugin:
                 decky.logger.error(f"Failed to setup ASI plugins directory: {e}")
 
             decky.logger.info("Starting upscaler DLL overwrite check")
-            # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with a newer static binary
+            # Optionally overwrite amd_fidelityfx_upscaler_dx12.dll with the separately bundled
+            # RDNA2-optimized static binary used for Steam Deck compatibility.
             # Toggle via env DECKY_SKIP_UPSCALER_OVERWRITE=true to skip.
             try:
                 skip_overwrite = os.environ.get("DECKY_SKIP_UPSCALER_OVERWRITE", "false").lower() in ("1", "true", "yes")
@@ -512,6 +537,9 @@ class Plugin:
                 decky.logger.info(f"Copied OptiScaler.ini from {source_ini} to {target_ini}")
             else:
                 decky.logger.warning("No OptiScaler.ini found to copy")
+
+            if target_ini.exists():
+                self._disable_hq_font_auto(target_ini)
 
             plugins_src = fgmod_path / "plugins"
             plugins_dest = directory / "plugins"
