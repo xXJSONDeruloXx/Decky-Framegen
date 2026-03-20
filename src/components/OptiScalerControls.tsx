@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PanelSection } from "@decky/ui";
 import { runInstallFGMod, runUninstallFGMod } from "../api";
 import { OperationResult } from "./ResultDisplay";
@@ -10,7 +10,7 @@ import { ClipboardCommands } from "./ClipboardCommands";
 import { InstructionCard } from "./InstructionCard";
 import { OptiScalerWiki } from "./OptiScalerWiki";
 import { UninstallButton } from "./UninstallButton";
-import { ManualPatchControls } from "./CustomPathOverride";
+import { InstalledGamesSection } from "./InstalledGamesSection";
 
 interface OptiScalerControlsProps {
   pathExists: boolean | null;
@@ -22,19 +22,15 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
   const [uninstalling, setUninstalling] = useState(false);
   const [installResult, setInstallResult] = useState<OperationResult | null>(null);
   const [uninstallResult, setUninstallResult] = useState<OperationResult | null>(null);
-  const [manualModeEnabled, setManualModeEnabled] = useState(false);
+
   useEffect(() => {
-    if (installResult) {
-      return createAutoCleanupTimer(() => setInstallResult(null), TIMEOUTS.resultDisplay);
-    }
-    return () => {}; // Ensure a cleanup function is always returned
+    if (!installResult) return () => {};
+    return createAutoCleanupTimer(() => setInstallResult(null), TIMEOUTS.resultDisplay);
   }, [installResult]);
 
   useEffect(() => {
-    if (uninstallResult) {
-      return createAutoCleanupTimer(() => setUninstallResult(null), TIMEOUTS.resultDisplay);
-    }
-    return () => {}; // Ensure a cleanup function is always returned
+    if (!uninstallResult) return () => {};
+    return createAutoCleanupTimer(() => setUninstallResult(null), TIMEOUTS.resultDisplay);
   }, [uninstallResult]);
 
   const handleInstallClick = async () => {
@@ -45,8 +41,8 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
       if (result.status === "success") {
         setPathExists(true);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
     } finally {
       setInstalling(false);
     }
@@ -60,8 +56,8 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
       if (result.status === "success") {
         setPathExists(false);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
     } finally {
       setUninstalling(false);
     }
@@ -69,33 +65,13 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
 
   return (
     <PanelSection>
-      <InstallationStatus 
-        pathExists={pathExists}
-        installing={installing}
-        onInstallClick={handleInstallClick}
-      />
-      
+      <InstallationStatus pathExists={pathExists} installing={installing} onInstallClick={handleInstallClick} />
       <OptiScalerHeader pathExists={pathExists} />
-      
-      <ManualPatchControls
-        isAvailable={pathExists === true}
-        onManualModeChange={setManualModeEnabled}
-      />
-
-      {!manualModeEnabled && (
-        <>
-          <ClipboardCommands pathExists={pathExists} />
-          
-          <InstructionCard pathExists={pathExists} />
-        </>
-      )}
+      <InstalledGamesSection isAvailable={pathExists === true} />
+      <ClipboardCommands pathExists={pathExists} />
+      <InstructionCard pathExists={pathExists} />
       <OptiScalerWiki pathExists={pathExists} />
-      
-      <UninstallButton 
-        pathExists={pathExists}
-        uninstalling={uninstalling}
-        onUninstallClick={handleUninstallClick}
-      />
+      <UninstallButton pathExists={pathExists} uninstalling={uninstalling} onUninstallClick={handleUninstallClick} />
     </PanelSection>
   );
 }

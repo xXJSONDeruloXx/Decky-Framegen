@@ -1,16 +1,3 @@
-// Common types for the application
-
-export interface ResultType {
-  status: string;
-  message?: string;
-  output?: string;
-}
-
-export interface GameType {
-  appid: number;
-  name: string;
-}
-
 // Common style definitions
 export const STYLES = {
   resultBox: {
@@ -21,19 +8,19 @@ export const STYLES = {
     border: '1px solid var(--decky-border-color)',
     fontSize: '14px'
   },
-  statusInstalled: { 
+  statusInstalled: {
     color: '#22c55e',
     fontWeight: 'bold',
     fontSize: '14px'
   },
-  statusNotInstalled: { 
+  statusNotInstalled: {
     color: '#f97316',
     fontWeight: 'bold',
     fontSize: '14px'
   },
-  statusSuccess: { color: "#22c55e" },
-  statusError: { color: "#ef4444" },
-  preWrap: { whiteSpace: "pre-wrap" as const },
+  statusSuccess: { color: '#22c55e' },
+  statusError: { color: '#ef4444' },
+  preWrap: { whiteSpace: 'pre-wrap' as const },
   instructionCard: {
     padding: '14px',
     backgroundColor: 'var(--decky-selected-ui-bg)',
@@ -47,20 +34,21 @@ export const STYLES = {
 
 // Common timeout values
 export const TIMEOUTS = {
-  resultDisplay: 5000,  // 5 seconds
-  pathCheck: 3000       // 3 seconds
+  resultDisplay: 5000,
+  pathCheck: 3000
 };
 
 // Message strings
 export const MESSAGES = {
-  modInstalled: "✅ OptiScaler Mod Installed",
-  modNotInstalled: "❌ OptiScaler Mod Not Installed",
-  installing: "Installing OptiScaler...",
-  installButton: "Setup OptiScaler Mod",
-  uninstalling: "Removing OptiScaler...",
-  uninstallButton: "Remove OptiScaler Mod",
-  installSuccess: "✅ OptiScaler mod setup successfully!",
-  uninstallSuccess: "✅ OptiScaler mod removed successfully.",
-  instructionTitle: "How to Use:",
-  instructionText: "Click 'Copy Patch Command' or 'Copy Unpatch Command', then go to your game's properties, and paste the command into the Launch Options field.\n\nIn-game: Enable DLSS in graphics settings to unlock FSR 3.1/XeSS 2.0 in DirectX12 Games.\n\nFor extended OptiScaler options, assign a back button to a keyboard's 'Insert' key."
+  modInstalled: '✅ Prefix-managed OptiScaler runtime installed',
+  modNotInstalled: '❌ Prefix-managed OptiScaler runtime not installed',
+  installing: 'Installing prefix-managed runtime...',
+  installButton: 'Install Prefix-Managed Runtime',
+  uninstalling: 'Removing runtime and cleaning prefixes...',
+  uninstallButton: 'Remove Runtime + Clean Prefixes',
+  installSuccess: '✅ Prefix-managed OptiScaler runtime installed successfully!',
+  uninstallSuccess: '✅ Prefix-managed OptiScaler runtime removed successfully.',
+  instructionTitle: 'How it works:',
+  instructionText:
+    'Use the Steam game integration section to enable OptiScaler for a specific game, or copy the launch command manually.\n\nOn launch, the plugin stages OptiScaler into compatdata/<appid>/pfx/drive_c/windows/system32 and keeps its writable INI under compatdata/<appid>/optiscaler-managed. The game install directory is left untouched.\n\nDefault proxy: winmm.dll. For advanced testing you can override it in launch options, e.g. OPTISCALER_PROXY=dxgi ~/fgmod/fgmod %command%.\n\nIn-game: press Insert to open the OptiScaler menu.'
 };

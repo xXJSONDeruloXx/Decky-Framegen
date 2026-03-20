@@ -9,14 +9,14 @@ export function ClipboardCommands({ pathExists }: ClipboardCommandsProps) {
 
   return (
     <>
-      <SmartClipboardButton 
-        command="~/fgmod/fgmod %command%"
-        buttonText="Copy Patch Command"
+      <SmartClipboardButton
+        command='OPTISCALER_PROXY=winmm ~/fgmod/fgmod %command%'
+        buttonText="Copy enable launch command"
       />
-      
-      <SmartClipboardButton 
+
+      <SmartClipboardButton
         command="~/fgmod/fgmod-uninstaller.sh %command%"
-        buttonText="Copy Unpatch Command"
+        buttonText="Copy cleanup launch command"
       />
     </>
   );

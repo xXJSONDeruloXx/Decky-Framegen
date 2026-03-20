@@ -20,6 +20,11 @@ export const listInstalledGames = callable<
   { status: string; games: { appid: string; name: string }[] }
 >("list_installed_games");
 
+export const cleanupManagedGame = callable<
+  [string],
+  { status: string; message?: string; output?: string }
+>("cleanup_managed_game");
+
 export const logError = callable<[string], void>("log_error");
 
 export const getPathDefaults = callable<

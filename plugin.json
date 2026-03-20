@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["DLSS", "Framegen","upscaling","FSR"],
-    "description": "This plugin installs and manages OptiScaler, a tool that enhances upscaling and enables frame generation in a range of DirectX 12 games.",
+    "description": "Prefix-managed OptiScaler integration for Decky that stages per-game payloads inside Proton compatdata instead of the game directory.",
     "image": "https://raw.githubusercontent.com/xXJSONDeruloXx/Decky-Framegen/refs/heads/main/assets/optiscaler_final.png"
   }
 }
