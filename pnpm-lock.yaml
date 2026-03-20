@@ -17,6 +17,10 @@ importers:
       tslib:
         specifier: ^2.7.0
         version: 2.7.0
+    optionalDependencies:
+      '@rollup/rollup-linux-x64-musl':
+        specifier: 4.22.5
+        version: 4.22.5
     devDependencies:
       '@decky/rollup':
         specifier: ^1.0.1
@@ -24,6 +28,9 @@ importers:
       '@decky/ui':
         specifier: ^4.7.2
         version: 4.7.2
+      '@rollup/wasm-node':
+        specifier: 4.22.5
+        version: 4.22.5
       '@types/react':
         specifier: 18.3.3
         version: 18.3.3
@@ -229,6 +236,11 @@ packages:
     resolution: {integrity: sha512-+lvL/4mQxSV8MukpkKyyvfwhH266COcWlXE/1qxwN08ajovta3459zrjLghYMgDerlzNwLAcFpvU+WWE5y6nAQ==}
     cpu: [x64]
     os: [win32]
+
+  '@rollup/wasm-node@4.22.5':
+    resolution: {integrity: sha512-42RTxk/g1NFaTRT7yo9T0K1OeJPS7xXAWQdUaajjmPPzZmfWjcms+tns8IQkwSlVrBB3EvE2y/FGwGwHmFAqEg==}
+    engines: {node: '>=18.0.0', npm: '>=8.0.0'}
+    hasBin: true
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
@@ -1066,6 +1078,12 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.22.5':
     optional: true
+
+  '@rollup/wasm-node@4.22.5':
+    dependencies:
+      '@types/estree': 1.0.6
+    optionalDependencies:
+      fsevents: 2.3.3
 
   '@types/estree@1.0.6': {}
 
