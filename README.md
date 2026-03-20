@@ -36,7 +36,7 @@ This plugin uses OptiScaler to replace DLSS calls with FSR3/FSR3.1, giving you:
 - Run the game at least once to make the uninstaller script run. After you can leave the launch option or remove it
 
 ### Configuring OptiScaler via Environment Variables
-Starting v0.15.0, you can update OptiScaler settings before a game launches by adding environment variables. 
+As of v0.15.1, you can update OptiScaler settings before a game launches by adding environment variables. 
 This is useful if you plan to use the same settings across multiple games so they are pre-configured by the time you launch them.
 
 For example, considering the following sample from the OptiScaler.ini config file:
