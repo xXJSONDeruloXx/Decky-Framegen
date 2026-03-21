@@ -24,10 +24,11 @@ error_exit() {
 bundle_root="${HOME}/fgmod"
 managed_dir_name="optiscaler-managed"
 manifest_name="manifest.env"
-proxy_name="${OPTISCALER_PROXY:-${DLL:-winmm}}"
+default_proxy="winmm"
+proxy_name="${OPTISCALER_PROXY:-${DLL:-}}"
 proxy_name="${proxy_name%.dll}"
-proxy_dll="${proxy_name}.dll"
-backup_dll="${proxy_name}-original.dll"
+proxy_dll=""
+backup_dll=""
 
 support_files=(
   "libxess.dll"
@@ -43,11 +44,6 @@ support_files=(
   "fakenvapi.dll"
   "fakenvapi.ini"
 )
-
-case "$proxy_name" in
-  winmm|dxgi|version|dbghelp|winhttp|wininet|d3d12) ;;
-  *) error_exit "Unsupported OPTISCALER_PROXY '$proxy_name'." ;;
-esac
 
 [[ -d "$bundle_root" ]] || error_exit "OptiScaler runtime not installed at $bundle_root"
 [[ -n "${STEAM_COMPAT_DATA_PATH:-}" ]] || error_exit "STEAM_COMPAT_DATA_PATH is required. Use this wrapper from a Steam/Proton launch option."
@@ -85,11 +81,25 @@ cleanup_stage_files() {
 mkdir -p "$system32_path" "$managed_root" "$managed_plugins"
 
 existing_proxy=""
+preferred_proxy=""
 if [[ -f "$manifest_path" ]]; then
   # shellcheck disable=SC1090
   source "$manifest_path"
   existing_proxy="${MANAGED_PROXY:-}"
+  preferred_proxy="${PREFERRED_PROXY:-}"
 fi
+
+if [[ -z "$proxy_name" ]]; then
+  proxy_name="${preferred_proxy:-$default_proxy}"
+fi
+
+case "$proxy_name" in
+  winmm|dxgi|version|dbghelp|winhttp|wininet|d3d12) ;;
+  *) error_exit "Unsupported OPTISCALER_PROXY '$proxy_name'." ;;
+esac
+
+proxy_dll="${proxy_name}.dll"
+backup_dll="${proxy_name}-original.dll"
 
 if [[ -n "$existing_proxy" && "$existing_proxy" != "$proxy_name" ]]; then
   log "Switching managed proxy from $existing_proxy to $proxy_name"
@@ -149,6 +159,7 @@ fi
 
 cat > "$manifest_path" <<EOF
 MANAGED_PROXY="$proxy_name"
+PREFERRED_PROXY="$preferred_proxy"
 BUNDLE_ROOT="$bundle_root"
 BUNDLE_VERSION="$runtime_version"
 SYSTEM32_PATH="$system32_path"
