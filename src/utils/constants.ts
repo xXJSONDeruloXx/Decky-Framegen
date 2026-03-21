@@ -50,5 +50,5 @@ export const MESSAGES = {
   uninstallSuccess: '✅ Prefix-managed OptiScaler runtime removed successfully.',
   instructionTitle: 'How it works:',
   instructionText:
-    'Use the Steam game integration section to enable OptiScaler for a specific game, or copy the launch command manually.\n\nOn launch, the plugin stages OptiScaler into compatdata/<appid>/pfx/drive_c/windows/system32 and keeps its writable INI under compatdata/<appid>/optiscaler-managed. The game install directory is left untouched.\n\nDefault proxy: winmm.dll. For advanced testing you can override it in launch options, e.g. OPTISCALER_PROXY=dxgi ~/fgmod/fgmod %command%.\n\nIn-game: press Insert to open the OptiScaler menu.'
+    'Use the Steam game integration section to enable OptiScaler for a specific game, or copy the launch command manually.\n\nOn launch, the plugin stages OptiScaler into compatdata/<appid>/pfx/drive_c/windows/system32 and keeps its writable INI under compatdata/<appid>/optiscaler-managed. The game install directory is left untouched.\n\nYou can now detect the current running game from the plugin, persist per-game proxy/config changes, and mirror INI edits into the live prefix copy while the game is running.\n\nDefault proxy: winmm.dll unless you set a different per-game preference. In-game: press Insert to open the OptiScaler menu.'
 };

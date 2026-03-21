@@ -14,13 +14,15 @@ Instead, it:
 - stages OptiScaler into `compatdata/<appid>/pfx/drive_c/windows/system32` at launch time
 - keeps a writable per-game config under `compatdata/<appid>/optiscaler-managed`
 - restores the original Wine/Proton proxy DLL on cleanup
+- lets you edit per-game OptiScaler settings from the plugin UI
+- can mirror INI changes into the live prefix copy while the game is running
 
 That makes the integration:
 
 - non-invasive
 - reversible
 - per-game
-- compatible with Steam launch options and future launcher/runtime style integration
+- much closer to a launcher/runtime feature than a file-drop mod installer
 
 ## Current default behavior
 
@@ -31,7 +33,7 @@ The default proxy is:
 The default launch command is:
 
 ```bash
-OPTISCALER_PROXY=winmm ~/fgmod/fgmod %command%
+~/fgmod/fgmod %command%
 ```
 
 To clean a game's managed prefix manually:
@@ -45,45 +47,65 @@ To clean a game's managed prefix manually:
 1. Install the plugin zip through Decky Loader.
 2. Open Decky Framegen.
 3. Press **Install Prefix-Managed Runtime**.
-4. Enable a game from the **Steam game integration** section, or copy the launch command manually.
+4. Enable a game from the **Steam game integration + live config** section, or copy the launch command manually.
 5. Launch the game.
 6. Press **Insert** in-game to open the OptiScaler menu.
 
-## Steam game integration
+## Steam game integration + live config
 
-The plugin can now manage Steam launch options for a selected installed game.
+The plugin can now:
 
-Enable:
+- detect the current running game from Steam UI
+- pick any installed Steam game from a dropdown
+- enable the generic prefix-managed launch option automatically
+- disable a game and clean its compatdata-managed OptiScaler state
+- read the selected game's managed or live `OptiScaler.ini`
+- persist per-game proxy preference
+- update quick OptiScaler settings from the plugin UI
+- save the full raw `OptiScaler.ini`
+- push config changes into the currently staged live prefix copy while the game is running
 
-- writes `OPTISCALER_PROXY=winmm ~/fgmod/fgmod %COMMAND%` into Steam launch options
+Enable writes this launch option:
 
-Disable:
+```bash
+~/fgmod/fgmod %COMMAND%
+```
 
-- clears Steam launch options
-- cleans the managed OptiScaler files from the game's compatdata prefix
+The wrapper then resolves the proxy using this order:
 
-## Advanced notes
+1. `OPTISCALER_PROXY` / `DLL` environment override if provided
+2. saved per-game preferred proxy from `manifest.env`
+3. fallback default `winmm`
 
-### Config persistence
+## Config persistence
 
-`OptiScaler.ini` is stored per game under:
+Per-game config lives here:
 
 ```text
 compatdata/<appid>/optiscaler-managed/OptiScaler.ini
 ```
 
-The runtime copies that INI into `system32` before launch and syncs it back after the game exits, so in-game menu saves persist.
+During launch the wrapper copies that INI into:
 
-### Proxy override
-
-You can test a different proxy by changing the launch option manually:
-
-```bash
-OPTISCALER_PROXY=dxgi ~/fgmod/fgmod %command%
-OPTISCALER_PROXY=version ~/fgmod/fgmod %command%
+```text
+compatdata/<appid>/pfx/drive_c/windows/system32/OptiScaler.ini
 ```
 
-Supported values currently include:
+When the game exits, the staged INI is synced back to the managed location.
+
+## Live editing caveat
+
+The plugin can write directly into the live prefix INI while the game is running.
+
+That means:
+
+- the file is updated immediately
+- persistence is preserved
+- some settings may still require OptiScaler or the game to reload/relaunch before they fully take effect, depending on what OptiScaler hot-reloads internally
+
+In other words: **live file update is supported**, but **live behavioral reload depends on OptiScaler/game behavior**.
+
+## Supported proxy values
 
 - `winmm`
 - `dxgi`
@@ -93,12 +115,12 @@ Supported values currently include:
 - `wininet`
 - `d3d12`
 
-### Environment-driven INI updates
+## Environment-driven INI updates
 
-The existing OptiScaler env var patching still works. For example:
+The wrapper still supports environment-based INI overrides. Example:
 
 ```bash
-Dx12Upscaler=fsr31 FrameGen_Enabled=true OPTISCALER_PROXY=winmm ~/fgmod/fgmod %command%
+Dx12Upscaler=fsr31 FrameGen_Enabled=true ~/fgmod/fgmod %command%
 ```
 
 ## Technical summary

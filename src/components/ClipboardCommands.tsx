@@ -10,7 +10,7 @@ export function ClipboardCommands({ pathExists }: ClipboardCommandsProps) {
   return (
     <>
       <SmartClipboardButton
-        command='OPTISCALER_PROXY=winmm ~/fgmod/fgmod %command%'
+        command="~/fgmod/fgmod %command%"
         buttonText="Copy enable launch command"
       />
 

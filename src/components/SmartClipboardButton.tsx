@@ -9,8 +9,8 @@ interface SmartClipboardButtonProps {
 }
 
 export function SmartClipboardButton({
-  command = 'OPTISCALER_PROXY=winmm ~/fgmod/fgmod %command%',
-  buttonText = 'Copy Launch Command',
+  command = "~/fgmod/fgmod %command%",
+  buttonText = "Copy Launch Command",
 }: SmartClipboardButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
