@@ -63,16 +63,6 @@ LEGACY_FILES = [
     "OptiScaler.log",
 ]
 
-QUICK_SETTING_DEFINITIONS = [
-    {"id": "Dx12Upscaler", "section": None, "key": "Dx12Upscaler", "default": "auto"},
-    {"id": "FrameGen.Enabled", "section": "FrameGen", "key": "Enabled", "default": "auto"},
-    {"id": "FGInput", "section": None, "key": "FGInput", "default": "auto"},
-    {"id": "FGOutput", "section": None, "key": "FGOutput", "default": "auto"},
-    {"id": "Fsr4ForceCapable", "section": None, "key": "Fsr4ForceCapable", "default": "false"},
-    {"id": "Fsr4EnableWatermark", "section": None, "key": "Fsr4EnableWatermark", "default": "false"},
-    {"id": "UseHQFont", "section": None, "key": "UseHQFont", "default": "false"},
-    {"id": "Menu.Scale", "section": "Menu", "key": "Scale", "default": "1.000000"},
-]
 
 
 class Plugin:
@@ -274,41 +264,203 @@ class Plugin:
             config.read(ini_path, encoding="utf-8")
         return config
 
+    def _bundle_ini_path(self) -> Path:
+        return self._bundle_path() / "OptiScaler.ini"
+
     def _find_sections_for_key(self, config: ConfigParser, key: str) -> list[str]:
         return [section for section in config.sections() if config.has_option(section, key)]
 
-    def _resolve_setting_definition(self, setting_id: str) -> dict | None:
-        for definition in QUICK_SETTING_DEFINITIONS:
-            if definition["id"] == setting_id:
-                return definition
+    def _setting_id(self, section: str, key: str) -> str:
+        return f"{section}.{key}"
+
+    def _humanize_key(self, value: str) -> str:
+        text = value.replace("_", " ")
+        text = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    def _sanitize_default_value(self, value: str) -> str:
+        candidate = value.strip()
+        if " - " in candidate and re.match(r"^[^ ]+\s+-\s+", candidate):
+            candidate = candidate.split(" - ", 1)[0].strip()
+        if "," in candidate and re.match(r"^[^,]+,", candidate):
+            candidate = candidate.split(",", 1)[0].strip()
+        return candidate
+
+    def _extract_default_from_comments(self, comment_lines: list[str]) -> str | None:
+        for line in comment_lines:
+            match = re.search(r"Default\s*\(auto\)\s*is\s*([^;]+)", line, flags=re.IGNORECASE)
+            if match:
+                return self._sanitize_default_value(match.group(1))
         return None
 
-    def _resolve_setting_section(self, config: ConfigParser, definition: dict) -> str | None:
-        hinted_section = definition.get("section")
-        key = definition["key"]
+    def _extract_enum_options(self, comment_lines: list[str], current_value: str) -> list[dict]:
+        options = []
+        seen = set()
 
-        if hinted_section and config.has_option(hinted_section, key):
-            return hinted_section
+        def add_option(value: str, label: str | None = None):
+            normalized = value.strip()
+            if not normalized or normalized in seen:
+                return
+            seen.add(normalized)
+            options.append({"value": normalized, "label": label or normalized})
 
-        matching_sections = self._find_sections_for_key(config, key)
-        if len(matching_sections) == 1:
-            return matching_sections[0]
-        if hinted_section:
-            return hinted_section
-        if matching_sections:
-            return matching_sections[0]
-        return None
+        if current_value == "auto":
+            add_option("auto")
 
-    def _extract_quick_settings(self, ini_path: Path) -> dict:
+        for line in comment_lines:
+            clean_line = line.strip()
+            lower_line = clean_line.lower()
+
+            if "true or false" in lower_line:
+                add_option("auto")
+                add_option("true")
+                add_option("false")
+                continue
+
+            if "|" in clean_line and "=" in clean_line:
+                for piece in clean_line.split("|"):
+                    match = re.match(r"\s*([^=|]+?)\s*=\s*(.+)\s*$", piece)
+                    if match:
+                        value = match.group(1).strip()
+                        label = f"{value} - {match.group(2).strip()}"
+                        add_option(value, label)
+                continue
+
+            before_default = clean_line.split("- Default", 1)[0].strip()
+            if "," in before_default:
+                for item in before_default.split(","):
+                    normalized = re.sub(r"\s*\(.*?\)", "", item).strip()
+                    if normalized and len(normalized) < 64 and "=" not in normalized:
+                        add_option(normalized)
+
+        if current_value and current_value not in seen:
+            add_option(current_value)
+
+        return options
+
+    def _extract_numeric_range(self, comment_lines: list[str]) -> tuple[float | None, float | None]:
+        patterns = [
+            r"\bFrom\s+(-?\d+(?:\.\d+)?)\s+to\s+(-?\d+(?:\.\d+)?)\b",
+            r"\b(-?\d+(?:\.\d+)?)\s+to\s+(-?\d+(?:\.\d+)?)\b",
+            r"\b(-?\d+(?:\.\d+)?)\s+-\s+(-?\d+(?:\.\d+)?)\b",
+        ]
+
+        for line in comment_lines:
+            if "=" in line and "|" in line:
+                continue
+            for pattern in patterns:
+                match = re.search(pattern, line, flags=re.IGNORECASE)
+                if match:
+                    return float(match.group(1)), float(match.group(2))
+        return None, None
+
+    def _infer_setting_metadata(self, section: str, key: str, current_value: str, comment_lines: list[str]) -> dict:
+        description_lines = [line for line in comment_lines if line and set(line) != {"-"}]
+        description = "\n".join(description_lines)
+        default_value = self._extract_default_from_comments(description_lines)
+        enum_options = self._extract_enum_options(description_lines, current_value)
+        range_min, range_max = self._extract_numeric_range(description_lines)
+        description_lower = description.lower()
+
+        numeric_type = "float" if any(token in description_lower for token in ["float", ".0", "timer resolution"]) else "int"
+        is_numeric = any(token in description_lower for token in ["float", "integer value", "uint", "int ", "0x", "measured in timer resolution units"]) or (
+            range_min is not None and range_max is not None
+        )
+        is_path = "path" in key.lower() or " path" in description_lower or "folder" in description_lower
+        is_keycode = "shortcut key" in description_lower or "virtual-key-codes" in description_lower or "0x" in description_lower
+
+        control = "text"
+        if enum_options and len(enum_options) > 1:
+            control = "dropdown"
+        elif range_min is not None and range_max is not None and not is_path and not is_keycode and (range_max - range_min) <= 1000:
+            control = "range"
+        elif is_numeric and not is_path:
+            control = "number"
+
+        step = 1
+        if control == "range":
+            if numeric_type == "float" or (range_min is not None and (not float(range_min).is_integer() or not float(range_max).is_integer())):
+                step = 0.01
+                if (range_max - range_min) > 10:
+                    step = 0.1
+            else:
+                step = 1
+
+        return {
+            "id": self._setting_id(section, key),
+            "section": section,
+            "key": key,
+            "label": self._humanize_key(key),
+            "description": description,
+            "default": default_value or current_value,
+            "control": control,
+            "options": enum_options,
+            "rangeMin": range_min,
+            "rangeMax": range_max,
+            "step": step,
+            "numericType": numeric_type,
+            "isPath": is_path,
+            "isKeycode": is_keycode,
+        }
+
+    def _parse_ini_schema(self, template_ini_path: Path) -> list[dict]:
+        if not template_ini_path.exists():
+            raise FileNotFoundError(f"Template ini not found at {template_ini_path}")
+
+        sections = []
+        current_section = None
+        section_entry = None
+        comment_buffer: list[str] = []
+
+        with open(template_ini_path, "r", encoding="utf-8", errors="replace") as ini_file:
+            for raw_line in ini_file:
+                stripped = raw_line.strip()
+                if not stripped:
+                    continue
+
+                if stripped.startswith(";"):
+                    cleaned = stripped.lstrip(";").strip()
+                    if cleaned:
+                        comment_buffer.append(cleaned)
+                    continue
+
+                section_match = re.match(r"^\[(.+)]$", stripped)
+                if section_match:
+                    current_section = section_match.group(1).strip()
+                    section_entry = {"id": current_section, "label": current_section, "settings": []}
+                    sections.append(section_entry)
+                    comment_buffer = []
+                    continue
+
+                if current_section and "=" in stripped and not stripped.startswith("#"):
+                    key, value = stripped.split("=", 1)
+                    key = key.strip()
+                    value = value.strip()
+                    metadata = self._infer_setting_metadata(current_section, key, value, comment_buffer)
+                    section_entry["settings"].append(metadata)
+                    comment_buffer = []
+
+        return sections
+
+    def _extract_all_settings(self, ini_path: Path, schema_sections: list[dict]) -> dict:
         config = self._read_ini_config(ini_path)
-        settings = {}
-        for definition in QUICK_SETTING_DEFINITIONS:
-            resolved_section = self._resolve_setting_section(config, definition)
-            value = definition["default"]
-            if resolved_section and config.has_option(resolved_section, definition["key"]):
-                value = config.get(resolved_section, definition["key"])
-            settings[definition["id"]] = value
-        return settings
+        values = {}
+        for section in schema_sections:
+            section_name = section["id"]
+            for setting in section["settings"]:
+                value = setting["default"]
+                if config.has_option(section_name, setting["key"]):
+                    value = config.get(section_name, setting["key"])
+                values[setting["id"]] = value
+        return values
+
+    def _schema_lookup(self, schema_sections: list[dict]) -> dict:
+        lookup = {}
+        for section in schema_sections:
+            for setting in section["settings"]:
+                lookup[setting["id"]] = setting
+        return lookup
 
     def _replace_ini_values(self, ini_path: Path, resolved_updates: list[tuple[str, str, str]]) -> None:
         lines = []
@@ -715,7 +867,8 @@ class Plugin:
 
             preferred_proxy = manifest.get("PREFERRED_PROXY") or manifest.get("MANAGED_PROXY") or "winmm"
             proxy = self._normalize_proxy(preferred_proxy)
-            settings = self._extract_quick_settings(source_ini)
+            schema = self._parse_ini_schema(self._bundle_ini_path())
+            settings = self._extract_all_settings(source_ini, schema)
 
             return {
                 "status": "success",
@@ -723,6 +876,7 @@ class Plugin:
                 "name": game_name,
                 "proxy": proxy,
                 "settings": settings,
+                "schema": schema,
                 "raw_ini": raw_ini,
                 "managed_exists": paths["managed_ini"].exists(),
                 "live_available": paths["live_ini"].exists(),
@@ -757,18 +911,17 @@ class Plugin:
             managed_ini = paths["managed_ini"]
             resolved_updates = []
             settings = settings or {}
+            schema_lookup = self._schema_lookup(self._parse_ini_schema(self._bundle_ini_path()))
 
             if raw_ini is not None:
                 with open(managed_ini, "w", encoding="utf-8") as ini_file:
                     ini_file.write(raw_ini)
             elif settings:
-                config = self._read_ini_config(managed_ini)
                 for setting_id, value in settings.items():
-                    definition = self._resolve_setting_definition(setting_id)
+                    definition = schema_lookup.get(setting_id)
                     if not definition:
                         continue
-                    section = self._resolve_setting_section(config, definition) or definition.get("section") or "OptiScaler"
-                    resolved_updates.append((section, definition["key"], str(value)))
+                    resolved_updates.append((definition["section"], definition["key"], str(value)))
                 if resolved_updates:
                     self._replace_ini_values(managed_ini, resolved_updates)
 
@@ -792,12 +945,18 @@ class Plugin:
                     else "Saved OptiScaler config, but no live prefix copy was available to update"
                 )
 
-            return {
-                "status": "success",
-                "message": message,
-                "live_applied": live_applied,
-                "proxy": self._parse_manifest_env(paths["manifest_path"]).get("PREFERRED_PROXY", proxy or "winmm"),
-            }
+            updated_config = await self.get_game_config(appid)
+            if updated_config.get("status") != "success":
+                return {
+                    "status": "success",
+                    "message": message,
+                    "live_applied": live_applied,
+                    "proxy": self._parse_manifest_env(paths["manifest_path"]).get("PREFERRED_PROXY", proxy or "winmm"),
+                }
+
+            updated_config["message"] = message
+            updated_config["live_applied"] = live_applied
+            return updated_config
         except Exception as exc:
             decky.logger.error(f"save_game_config failed for {appid}: {exc}")
             return {"status": "error", "message": str(exc)}

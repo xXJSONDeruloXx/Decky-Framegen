@@ -18,7 +18,7 @@ export const getGameConfig = callable<[string], GameConfigResponse>("get_game_co
 
 export const saveGameConfig = callable<
   [string, Record<string, string>, string | null, boolean, string | null],
-  ApiResponse
+  GameConfigResponse
 >("save_game_config");
 
 export const logError = callable<[string], void>("log_error");
