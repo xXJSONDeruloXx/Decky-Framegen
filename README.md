@@ -14,8 +14,9 @@ Instead, it:
 - stages OptiScaler into `compatdata/<appid>/pfx/drive_c/windows/system32` at launch time
 - keeps a writable per-game config under `compatdata/<appid>/optiscaler-managed`
 - restores the original Wine/Proton proxy DLL on cleanup
-- lets you edit per-game OptiScaler settings from the plugin UI
-- can mirror INI changes into the live prefix copy while the game is running
+- parses the bundled OptiScaler template INI to expose real config sections/settings in Decky UI
+- autosaves config changes immediately
+- mirrors config changes into the live prefix copy while the selected game is running
 
 That makes the integration:
 
@@ -26,21 +27,23 @@ That makes the integration:
 
 ## Current default behavior
 
-The default proxy is:
-
-- `winmm.dll`
-
-The default launch command is:
+Default copied launch command:
 
 ```bash
 ~/fgmod/fgmod %command%
 ```
 
-To clean a game's managed prefix manually:
+Cleanup command:
 
 ```bash
 ~/fgmod/fgmod-uninstaller.sh %command%
 ```
+
+Proxy selection order inside the wrapper is:
+
+1. `OPTISCALER_PROXY` / `DLL` env override if present
+2. saved per-game preferred proxy
+3. fallback `winmm`
 
 ## How to use
 
@@ -50,19 +53,21 @@ To clean a game's managed prefix manually:
 4. Enable a game from the **Steam game integration + live config** section, or copy the launch command manually.
 5. Launch the game.
 6. Press **Insert** in-game to open the OptiScaler menu.
+7. If you want to change config while the game is open, open Decky and edit the selected running game there.
 
 ## Steam game integration + live config
 
 The plugin can now:
 
-- detect the current running game from Steam UI
+- detect the current running Steam game
 - pick any installed Steam game from a dropdown
 - enable the generic prefix-managed launch option automatically
 - disable a game and clean its compatdata-managed OptiScaler state
 - read the selected game's managed or live `OptiScaler.ini`
 - persist per-game proxy preference
-- update quick OptiScaler settings from the plugin UI
-- save the full raw `OptiScaler.ini`
+- browse parsed OptiScaler config sections
+- render section settings with Decky dropdowns, sliders, and text fields
+- autosave changes immediately
 - push config changes into the currently staged live prefix copy while the game is running
 
 Enable writes this launch option:
@@ -70,12 +75,6 @@ Enable writes this launch option:
 ```bash
 ~/fgmod/fgmod %COMMAND%
 ```
-
-The wrapper then resolves the proxy using this order:
-
-1. `OPTISCALER_PROXY` / `DLL` environment override if provided
-2. saved per-game preferred proxy from `manifest.env`
-3. fallback default `winmm`
 
 ## Config persistence
 
@@ -103,7 +102,7 @@ That means:
 - persistence is preserved
 - some settings may still require OptiScaler or the game to reload/relaunch before they fully take effect, depending on what OptiScaler hot-reloads internally
 
-In other words: **live file update is supported**, but **live behavioral reload depends on OptiScaler/game behavior**.
+So: **live file update is supported**, but **live behavioral reload still depends on OptiScaler/game behavior**.
 
 ## Supported proxy values
 

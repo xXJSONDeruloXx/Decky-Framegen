@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ButtonItem,
   ConfirmModal,
@@ -7,6 +7,7 @@ import {
   PanelSection,
   PanelSectionRow,
   SliderField,
+  TextField,
   Router,
   showModal,
 } from "@decky/ui";
@@ -18,42 +19,26 @@ import {
   saveGameConfig,
 } from "../api";
 import { safeAsyncOperation } from "../utils";
-import type { ApiResponse, GameConfigResponse, GameInfo } from "../types/index";
+import type {
+  ApiResponse,
+  GameConfigResponse,
+  GameConfigSettingSchema,
+  GameInfo,
+} from "../types/index";
 import { STYLES } from "../utils/constants";
 
 const DEFAULT_LAUNCH_COMMAND = "~/fgmod/fgmod %COMMAND%";
 const POLL_INTERVAL_MS = 3000;
+const AUTOSAVE_DELAY_MS = 500;
 
 type RunningApp = {
   appid: string;
   display_name: string;
 };
 
-const PROXY_OPTIONS = ["winmm", "dxgi", "version", "dbghelp", "winhttp", "wininet", "d3d12"];
-const UPSCALER_OPTIONS = ["auto", "fsr31", "xess", "dlss", "native"];
-const TRI_STATE_OPTIONS = ["auto", "true", "false"];
-const FG_INPUT_OPTIONS = ["auto", "fsrfg", "xefg", "dlssg"];
-const FG_OUTPUT_OPTIONS = ["auto", "fsrfg", "xefg"];
-
-const defaultQuickSettings = {
-  Dx12Upscaler: "auto",
-  "FrameGen.Enabled": "auto",
-  FGInput: "auto",
-  FGOutput: "auto",
-  Fsr4ForceCapable: "false",
-  Fsr4EnableWatermark: "false",
-  UseHQFont: "false",
-  "Menu.Scale": "1.000000",
-};
-
 interface InstalledGamesSectionProps {
   isAvailable: boolean;
 }
-
-const normalizeSettings = (settings?: Record<string, string>) => ({
-  ...defaultQuickSettings,
-  ...(settings || {}),
-});
 
 const formatResult = (result: ApiResponse | null, fallbackSuccess: string) => {
   if (!result) return "";
@@ -61,6 +46,19 @@ const formatResult = (result: ApiResponse | null, fallbackSuccess: string) => {
     return result.message || result.output || fallbackSuccess;
   }
   return `Error: ${result.message || result.output || "Operation failed"}`;
+};
+
+const buildSignature = (proxy: string, settings: Record<string, string>) =>
+  JSON.stringify({ proxy, settings });
+
+const valueForSetting = (settings: Record<string, string>, setting: GameConfigSettingSchema) =>
+  settings[setting.id] ?? setting.default ?? "auto";
+
+const defaultNumericValue = (setting: GameConfigSettingSchema) => {
+  const parsedDefault = Number.parseFloat(setting.default ?? "");
+  if (Number.isFinite(parsedDefault)) return parsedDefault;
+  if (typeof setting.rangeMin === "number") return setting.rangeMin;
+  return 0;
 };
 
 export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProps) {
@@ -74,18 +72,32 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
   const [configLoading, setConfigLoading] = useState(false);
   const [configResult, setConfigResult] = useState<string>("");
   const [config, setConfig] = useState<GameConfigResponse | null>(null);
-  const [quickSettings, setQuickSettings] = useState<Record<string, string>>(defaultQuickSettings);
+  const [settingValues, setSettingValues] = useState<Record<string, string>>({});
   const [selectedProxy, setSelectedProxy] = useState<string>("winmm");
-  const [rawIni, setRawIni] = useState<string>("");
-  const [savingQuick, setSavingQuick] = useState(false);
-  const [savingQuickLive, setSavingQuickLive] = useState(false);
-  const [savingRaw, setSavingRaw] = useState(false);
-  const [savingRawLive, setSavingRawLive] = useState(false);
+  const [selectedSectionId, setSelectedSectionId] = useState<string>("");
+  const [autoSaving, setAutoSaving] = useState(false);
+
+  const skipAutosaveRef = useRef(true);
+  const lastLoadedSignatureRef = useRef<string>("");
 
   const selectedAppId = selectedGame ? String(selectedGame.appid) : null;
   const selectedIsRunning = useMemo(
     () => Boolean(selectedAppId && runningApps.some((app) => String(app.appid) === selectedAppId)),
     [runningApps, selectedAppId]
+  );
+
+  const sectionOptions = useMemo(
+    () =>
+      (config?.schema || []).map((section) => ({
+        data: section.id,
+        label: `${section.label} (${section.settings.length})`,
+      })),
+    [config?.schema]
+  );
+
+  const activeSection = useMemo(
+    () => (config?.schema || []).find((section) => section.id === selectedSectionId) || config?.schema?.[0] || null,
+    [config?.schema, selectedSectionId]
   );
 
   const refreshRunningApps = useCallback(() => {
@@ -125,13 +137,21 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
       }
 
       if (response.status === "success") {
+        skipAutosaveRef.current = true;
         setConfig(response);
-        setQuickSettings(normalizeSettings(response.settings));
+        setSettingValues(response.settings || {});
         setSelectedProxy(response.proxy || "winmm");
-        setRawIni(response.raw_ini || "");
+        setSelectedSectionId((current) =>
+          current && response.schema?.some((section) => section.id === current)
+            ? current
+            : response.schema?.[0]?.id || ""
+        );
         setConfigResult("");
+        lastLoadedSignatureRef.current = buildSignature(response.proxy || "winmm", response.settings || {});
       } else {
         setConfig(null);
+        setSettingValues({});
+        setSelectedSectionId("");
         setConfigResult(`Error: ${response.message || response.output || "Failed to load game config"}`);
       }
 
@@ -183,6 +203,55 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
     void loadConfig(selectedAppId);
   }, [isAvailable, loadConfig, selectedAppId]);
 
+  useEffect(() => {
+    if (!selectedAppId || !config?.schema?.length) return;
+
+    const currentSignature = buildSignature(selectedProxy, settingValues);
+    if (skipAutosaveRef.current) {
+      skipAutosaveRef.current = false;
+      lastLoadedSignatureRef.current = currentSignature;
+      return;
+    }
+
+    if (currentSignature === lastLoadedSignatureRef.current) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setAutoSaving(true);
+      try {
+        const response = await saveGameConfig(selectedAppId, settingValues, selectedProxy, selectedIsRunning, null);
+        if (response.status === "success") {
+          const updated = response as GameConfigResponse;
+          skipAutosaveRef.current = true;
+          setConfig(updated);
+          setSettingValues(updated.settings || settingValues);
+          setSelectedProxy(updated.proxy || selectedProxy);
+          setSelectedSectionId((current) =>
+            current && updated.schema?.some((section) => section.id === current)
+              ? current
+              : updated.schema?.[0]?.id || ""
+          );
+          lastLoadedSignatureRef.current = buildSignature(updated.proxy || selectedProxy, updated.settings || settingValues);
+          setConfigResult(
+            response.message ||
+              (selectedIsRunning
+                ? "Applied config immediately to the running game."
+                : "Saved config for the selected game.")
+          );
+        } else {
+          setConfigResult(formatResult(response, "Failed to save config."));
+        }
+      } catch (error) {
+        setConfigResult(error instanceof Error ? `Error: ${error.message}` : "Error saving config");
+      } finally {
+        setAutoSaving(false);
+      }
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => clearTimeout(timer);
+  }, [config?.schema, selectedAppId, selectedIsRunning, selectedProxy, settingValues]);
+
   const handleEnable = async () => {
     if (!selectedGame) return;
 
@@ -223,9 +292,9 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
 
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, "");
       setConfig(null);
-      setQuickSettings(defaultQuickSettings);
+      setSettingValues({});
       setSelectedProxy("winmm");
-      setRawIni("");
+      setSelectedSectionId("");
       setConfigResult(`✓ Cleared launch options and cleaned the managed compatdata prefix for ${selectedGame.name}.`);
     } catch (error) {
       logError(`InstalledGamesSection.handleDisable: ${String(error)}`);
@@ -235,36 +304,98 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
     }
   };
 
-  const saveQuickSettings = async (applyLive: boolean) => {
-    if (!selectedAppId) return;
-
-    const setBusy = applyLive ? setSavingQuickLive : setSavingQuick;
-    setBusy(true);
-    try {
-      const response = await saveGameConfig(selectedAppId, quickSettings, selectedProxy, applyLive, null);
-      setConfigResult(formatResult(response, applyLive ? "Applied config to the running game." : "Saved config."));
-      await loadConfig(selectedAppId);
-    } catch (error) {
-      setConfigResult(error instanceof Error ? `Error: ${error.message}` : "Error saving config");
-    } finally {
-      setBusy(false);
-    }
+  const updateSettingValue = (settingId: string, value: string) => {
+    setSettingValues((prev) => ({ ...prev, [settingId]: value }));
   };
 
-  const saveRawEditor = async (applyLive: boolean) => {
-    if (!selectedAppId) return;
+  const renderSettingControl = (setting: GameConfigSettingSchema) => {
+    const currentValue = valueForSetting(settingValues, setting);
 
-    const setBusy = applyLive ? setSavingRawLive : setSavingRaw;
-    setBusy(true);
-    try {
-      const response = await saveGameConfig(selectedAppId, {}, selectedProxy, applyLive, rawIni);
-      setConfigResult(formatResult(response, applyLive ? "Applied raw INI to the running game." : "Saved raw INI."));
-      await loadConfig(selectedAppId);
-    } catch (error) {
-      setConfigResult(error instanceof Error ? `Error: ${error.message}` : "Error saving raw INI");
-    } finally {
-      setBusy(false);
+    if (setting.control === "dropdown") {
+      const options = [...setting.options];
+      if (!options.some((option) => option.value === currentValue)) {
+        options.push({ value: currentValue, label: currentValue });
+      }
+
+      return (
+        <PanelSectionRow key={setting.id}>
+          <DropdownItem
+            label={setting.label}
+            description={setting.description}
+            rgOptions={options.map((option) => ({ data: option.value, label: option.label }))}
+            selectedOption={currentValue}
+            onChange={(option) => updateSettingValue(setting.id, String(option.data))}
+            menuLabel={setting.label}
+            strDefaultLabel={setting.label}
+          />
+        </PanelSectionRow>
+      );
     }
+
+    if (setting.control === "range") {
+      const isAuto = currentValue === "auto";
+      const numericValue = Number.parseFloat(currentValue);
+      const effectiveValue = Number.isFinite(numericValue) ? numericValue : defaultNumericValue(setting);
+
+      return (
+        <div key={setting.id}>
+          <PanelSectionRow>
+            <DropdownItem
+              label={setting.label}
+              description={setting.description}
+              rgOptions={[
+                { data: "auto", label: "auto" },
+                { data: "custom", label: "custom" },
+              ]}
+              selectedOption={isAuto ? "auto" : "custom"}
+              onChange={(option) => {
+                if (String(option.data) === "auto") {
+                  updateSettingValue(setting.id, "auto");
+                } else if (currentValue === "auto") {
+                  const baseValue = defaultNumericValue(setting);
+                  updateSettingValue(
+                    setting.id,
+                    setting.numericType === "float" ? baseValue.toFixed(2) : String(Math.round(baseValue))
+                  );
+                }
+              }}
+              menuLabel={`${setting.label} mode`}
+              strDefaultLabel={`${setting.label} mode`}
+            />
+          </PanelSectionRow>
+          {!isAuto ? (
+            <PanelSectionRow>
+              <SliderField
+                label={`${setting.label} value`}
+                value={effectiveValue}
+                min={setting.rangeMin ?? 0}
+                max={setting.rangeMax ?? 1}
+                step={setting.step ?? 1}
+                showValue
+                editableValue
+                onChange={(value) =>
+                  updateSettingValue(
+                    setting.id,
+                    setting.numericType === "float" ? value.toFixed(2) : String(Math.round(value))
+                  )
+                }
+              />
+            </PanelSectionRow>
+          ) : null}
+        </div>
+      );
+    }
+
+    return (
+      <PanelSectionRow key={setting.id}>
+        <TextField
+          label={setting.label}
+          description={setting.description}
+          value={currentValue}
+          onChange={(event) => updateSettingValue(setting.id, event.currentTarget.value)}
+        />
+      </PanelSectionRow>
+    );
   };
 
   if (!isAvailable) return null;
@@ -281,9 +412,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
           }
         >
           <div style={{ ...STYLES.preWrap, fontSize: "12px" }}>
-            {runningApps.length > 0
-              ? runningApps.map((app) => app.display_name).join("\n")
-              : "Idle"}
+            {runningApps.length > 0 ? runningApps.map((app) => app.display_name).join("\n") : "Idle"}
           </div>
         </Field>
       </PanelSectionRow>
@@ -306,6 +435,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
 
       <PanelSectionRow>
         <DropdownItem
+          label="Target game"
           rgOptions={games.map((game) => ({
             data: String(game.appid),
             label: game.name,
@@ -324,7 +454,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
 
       <PanelSectionRow>
         <div style={STYLES.instructionCard}>
-          Enable writes the wrapper launch option automatically. Disable clears launch options and removes staged files from the selected game's compatdata prefix. The config editor below persists changes to the selected game and can also mirror them into the live prefix copy while the game is running.
+          Enable writes the wrapper launch option automatically. Disable clears launch options and removes staged files from the selected game's compatdata prefix. All config controls below now autosave immediately, and if the selected game is running they also update the live prefix copy automatically.
         </div>
       </PanelSectionRow>
 
@@ -359,15 +489,17 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
         </>
       ) : null}
 
-      {configResult ? (
+      {configResult || autoSaving ? (
         <PanelSectionRow>
           <div
             style={{
               ...STYLES.preWrap,
-              ...(configResult.startsWith("Error") ? STYLES.statusNotInstalled : STYLES.statusInstalled),
+              ...((configResult.startsWith("Error") ? STYLES.statusNotInstalled : STYLES.statusInstalled) as object),
             }}
           >
-            {configResult.startsWith("Error") ? "❌" : "✅"} {configResult}
+            {autoSaving ? "💾 Autosaving configuration..." : null}
+            {autoSaving && configResult ? "\n" : null}
+            {configResult ? `${configResult.startsWith("Error") ? "❌" : "✅"} ${configResult}` : null}
           </div>
         </PanelSectionRow>
       ) : null}
@@ -388,159 +520,47 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
 
           <PanelSectionRow>
             <DropdownItem
-              rgOptions={PROXY_OPTIONS.map((proxy) => ({ data: proxy, label: proxy }))}
+              label="Proxy DLL"
+              description="Persisted per game and used by the wrapper on next launch. Changes autosave immediately."
+              rgOptions={["winmm", "dxgi", "version", "dbghelp", "winhttp", "wininet", "d3d12"].map((proxy) => ({
+                data: proxy,
+                label: proxy,
+              }))}
               selectedOption={selectedProxy}
               onChange={(option) => setSelectedProxy(String(option.data))}
               menuLabel="Proxy DLL"
               strDefaultLabel="Proxy DLL"
-              description="Persisted per game and used by the wrapper on next launch."
             />
           </PanelSectionRow>
 
           <PanelSectionRow>
             <DropdownItem
-              rgOptions={UPSCALER_OPTIONS.map((value) => ({ data: value, label: value }))}
-              selectedOption={quickSettings.Dx12Upscaler}
-              onChange={(option) => setQuickSettings((prev) => ({ ...prev, Dx12Upscaler: String(option.data) }))}
-              menuLabel="DX12 upscaler"
-              strDefaultLabel="DX12 upscaler"
+              label="Config section"
+              description="Browse and edit every setting parsed from the bundled OptiScaler.ini template."
+              rgOptions={sectionOptions}
+              selectedOption={selectedSectionId}
+              onChange={(option) => setSelectedSectionId(String(option.data))}
+              menuLabel="Config section"
+              strDefaultLabel="Config section"
+              disabled={sectionOptions.length === 0}
             />
           </PanelSectionRow>
 
-          <PanelSectionRow>
-            <DropdownItem
-              rgOptions={TRI_STATE_OPTIONS.map((value) => ({ data: value, label: value }))}
-              selectedOption={quickSettings["FrameGen.Enabled"]}
-              onChange={(option) => setQuickSettings((prev) => ({ ...prev, "FrameGen.Enabled": String(option.data) }))}
-              menuLabel="Frame generation enabled"
-              strDefaultLabel="Frame generation enabled"
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <DropdownItem
-              rgOptions={FG_INPUT_OPTIONS.map((value) => ({ data: value, label: value }))}
-              selectedOption={quickSettings.FGInput}
-              onChange={(option) => setQuickSettings((prev) => ({ ...prev, FGInput: String(option.data) }))}
-              menuLabel="FG input"
-              strDefaultLabel="FG input"
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <DropdownItem
-              rgOptions={FG_OUTPUT_OPTIONS.map((value) => ({ data: value, label: value }))}
-              selectedOption={quickSettings.FGOutput}
-              onChange={(option) => setQuickSettings((prev) => ({ ...prev, FGOutput: String(option.data) }))}
-              menuLabel="FG output"
-              strDefaultLabel="FG output"
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <DropdownItem
-              rgOptions={TRI_STATE_OPTIONS.map((value) => ({ data: value, label: value }))}
-              selectedOption={quickSettings.Fsr4ForceCapable}
-              onChange={(option) => setQuickSettings((prev) => ({ ...prev, Fsr4ForceCapable: String(option.data) }))}
-              menuLabel="FSR4 force capable"
-              strDefaultLabel="FSR4 force capable"
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <DropdownItem
-              rgOptions={TRI_STATE_OPTIONS.map((value) => ({ data: value, label: value }))}
-              selectedOption={quickSettings.Fsr4EnableWatermark}
-              onChange={(option) => setQuickSettings((prev) => ({ ...prev, Fsr4EnableWatermark: String(option.data) }))}
-              menuLabel="FSR4 watermark"
-              strDefaultLabel="FSR4 watermark"
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <DropdownItem
-              rgOptions={TRI_STATE_OPTIONS.map((value) => ({ data: value, label: value }))}
-              selectedOption={quickSettings.UseHQFont}
-              onChange={(option) => setQuickSettings((prev) => ({ ...prev, UseHQFont: String(option.data) }))}
-              menuLabel="Use HQ font"
-              strDefaultLabel="Use HQ font"
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <SliderField
-              label="Menu scale"
-              value={Number.parseFloat(quickSettings["Menu.Scale"] || "1") || 1}
-              min={0.5}
-              max={2.0}
-              step={0.05}
-              showValue
-              editableValue
-              onChange={(value) =>
-                setQuickSettings((prev) => ({
-                  ...prev,
-                  "Menu.Scale": value.toFixed(6),
-                }))
-              }
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ButtonItem layout="below" onClick={() => saveQuickSettings(false)} disabled={savingQuick || savingQuickLive}>
-              {savingQuick ? "Saving..." : "Apply + persist quick settings"}
-            </ButtonItem>
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={() => saveQuickSettings(true)}
-              disabled={!selectedIsRunning || savingQuick || savingQuickLive}
-            >
-              {savingQuickLive ? "Applying live..." : "Apply quick settings to running game now"}
-            </ButtonItem>
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <Field
-              label="Advanced raw INI editor"
-              description="Edits the selected game's OptiScaler.ini directly. Use this for settings not exposed above."
-            >
-              <textarea
-                value={rawIni}
-                onChange={(event) => setRawIni(event.target.value)}
-                style={{
-                  width: "100%",
-                  minHeight: "280px",
-                  resize: "vertical",
-                  boxSizing: "border-box",
-                  borderRadius: "8px",
-                  border: "1px solid var(--decky-border-color)",
-                  background: "rgba(255,255,255,0.05)",
-                  color: "inherit",
-                  padding: "10px",
-                  fontFamily: "monospace",
-                  fontSize: "11px",
-                }}
-              />
-            </Field>
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ButtonItem layout="below" onClick={() => saveRawEditor(false)} disabled={savingRaw || savingRawLive}>
-              {savingRaw ? "Saving raw INI..." : "Save raw INI"}
-            </ButtonItem>
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={() => saveRawEditor(true)}
-              disabled={!selectedIsRunning || savingRaw || savingRawLive}
-            >
-              {savingRawLive ? "Applying raw INI live..." : "Save raw INI + apply live"}
-            </ButtonItem>
-          </PanelSectionRow>
+          {activeSection ? (
+            <>
+              <PanelSectionRow>
+                <Field
+                  label={activeSection.label}
+                  description={`Showing ${activeSection.settings.length} setting${activeSection.settings.length === 1 ? "" : "s"} in this section.`}
+                >
+                  {selectedIsRunning
+                    ? "Changes in this section will be applied to the managed config and the live prefix copy."
+                    : "Changes in this section will be saved for the next launch unless the game is already running."}
+                </Field>
+              </PanelSectionRow>
+              {activeSection.settings.map(renderSettingControl)}
+            </>
+          ) : null}
         </>
       ) : null}
     </PanelSection>

@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["DLSS", "Framegen","upscaling","FSR"],
-    "description": "Prefix-managed OptiScaler integration for Decky with per-game live config editing inside Proton compatdata instead of the game directory.",
+    "description": "Prefix-managed OptiScaler integration for Decky with full per-game live config controls inside Proton compatdata instead of the game directory.",
     "image": "https://raw.githubusercontent.com/xXJSONDeruloXx/Decky-Framegen/refs/heads/main/assets/optiscaler_final.png"
   }
 }

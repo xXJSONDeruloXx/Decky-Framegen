@@ -1,7 +1,7 @@
 {
   "name": "decky-framegen",
-  "version": "0.17.0",
-  "description": "Prefix-managed OptiScaler integration for Decky with per-game live config editing inside Proton compatdata instead of the game directory.",
+  "version": "0.18.0",
+  "description": "Prefix-managed OptiScaler integration for Decky with full per-game live config controls inside Proton compatdata instead of the game directory.",
   "type": "module",
   "scripts": {
     "build": "node ./node_modules/@rollup/wasm-node/dist/bin/rollup -c",
