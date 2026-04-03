@@ -132,12 +132,15 @@ rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini"
 
 # === Remove NVAPI Files (Current and Legacy) ===
 echo " Removing NVAPI files..."
-rm -f "fakenvapi.dll" "fakenvapi.ini"  # Current v0.9.0-pre4 approach
+rm -f "fakenvapi.dll" "fakenvapi.ini"  # v0.9.0-final
 rm -f "nvapi64.dll" "nvapi64.dll.b"    # Legacy cleanup for older versions and backups
 
 # === Remove ASI Plugins ===
 echo " Removing ASI plugins directory..."
 rm -rf "plugins"
+
+# === Remove D3D12_Optiscaler directory (required by v0.9.0-final) ===
+rm -rf "D3D12_Optiscaler"
 
 # === Remove Legacy Files ===
 echo " Removing legacy files..."
