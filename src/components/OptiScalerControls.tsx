@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { PanelSection } from "@decky/ui";
+import { DropdownItem, PanelSection, PanelSectionRow } from "@decky/ui";
 import { runInstallFGMod, runUninstallFGMod } from "../api";
 import { OperationResult } from "./ResultDisplay";
 import { createAutoCleanupTimer } from "../utils";
-import { TIMEOUTS } from "../utils/constants";
+import { TIMEOUTS, PROXY_DLL_OPTIONS, DEFAULT_PROXY_DLL } from "../utils/constants";
 import { InstallationStatus } from "./InstallationStatus";
 import { OptiScalerHeader } from "./OptiScalerHeader";
 import { ClipboardCommands } from "./ClipboardCommands";
@@ -23,6 +23,7 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
   const [installResult, setInstallResult] = useState<OperationResult | null>(null);
   const [uninstallResult, setUninstallResult] = useState<OperationResult | null>(null);
   const [manualModeEnabled, setManualModeEnabled] = useState(false);
+  const [dllName, setDllName] = useState<string>(DEFAULT_PROXY_DLL);
   useEffect(() => {
     if (installResult) {
       return createAutoCleanupTimer(() => setInstallResult(null), TIMEOUTS.resultDisplay);
@@ -76,15 +77,29 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
       />
       
       <OptiScalerHeader pathExists={pathExists} />
-      
+
+      {pathExists === true && (
+        <PanelSectionRow>
+          <DropdownItem
+            label="Proxy DLL name"
+            description={PROXY_DLL_OPTIONS.find((o) => o.value === dllName)?.hint}
+            menuLabel="Proxy DLL name"
+            selectedOption={dllName}
+            rgOptions={PROXY_DLL_OPTIONS.map((o) => ({ data: o.value, label: o.label }))}
+            onChange={(option) => setDllName(String(option.data))}
+          />
+        </PanelSectionRow>
+      )}
+
       <ManualPatchControls
         isAvailable={pathExists === true}
         onManualModeChange={setManualModeEnabled}
+        dllName={dllName}
       />
 
       {!manualModeEnabled && (
         <>
-          <ClipboardCommands pathExists={pathExists} />
+          <ClipboardCommands pathExists={pathExists} dllName={dllName} />
           
           <InstructionCard pathExists={pathExists} />
         </>

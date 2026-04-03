@@ -223,7 +223,13 @@ if [[ $# -gt 1 ]]; then
   
   # Execute the original command
   export SteamDeck=0
-  export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,dxgi=n,b"
+  # Build WINEDLLOVERRIDES from the actual proxy DLL name (strip extension to get the stem)
+  if [[ "$dll_name" == *.dll ]]; then
+    _wine_dll="${dll_name%.dll}"
+    export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,${_wine_dll}=n,b"
+    unset _wine_dll
+  fi
+  # .asi files are loaded by an ASI loader — no WINEDLLOVERRIDES entry needed
 
   # Filter out leading -- separators (from Steam launch options)
   while [[ $# -gt 0 && "$1" == "--" ]]; do

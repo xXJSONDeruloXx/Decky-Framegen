@@ -10,6 +10,16 @@ from pathlib import Path
 # Set to False or comment out this constant to skip the overwrite by default.
 UPSCALER_OVERWRITE_ENABLED = True
 
+VALID_DLL_NAMES = {
+    "dxgi.dll",
+    "winmm.dll",
+    "dbghelp.dll",
+    "version.dll",
+    "wininet.dll",
+    "winhttp.dll",
+    "OptiScaler.asi",
+}
+
 INJECTOR_FILENAMES = [
     "dxgi.dll",
     "winmm.dll",
@@ -523,7 +533,7 @@ class Plugin:
         decky.logger.info(f"Resolved directory {directory} to absolute path {target}")
         return target
 
-    def _manual_patch_directory_impl(self, directory: Path) -> dict:
+    def _manual_patch_directory_impl(self, directory: Path, dll_name: str = "dxgi.dll") -> dict:
         fgmod_path = Path(decky.HOME) / "fgmod"
         if not fgmod_path.exists():
             return {
@@ -538,7 +548,6 @@ class Plugin:
                 "message": "OptiScaler.dll not found in ~/fgmod. Reinstall OptiScaler.",
             }
 
-        dll_name = "dxgi.dll"
         preserve_ini = True
 
         try:
@@ -772,14 +781,16 @@ class Plugin:
     async def log_error(self, error: str) -> None:
         decky.logger.error(f"FRONTEND: {error}")
 
-    async def manual_patch_directory(self, directory: str) -> dict:
+    async def manual_patch_directory(self, directory: str, dll_name: str = "dxgi.dll") -> dict:
+        if dll_name not in VALID_DLL_NAMES:
+            return {"status": "error", "message": f"Invalid proxy DLL name: {dll_name}"}
         try:
             target_dir = self._resolve_target_directory(directory)
         except (FileNotFoundError, NotADirectoryError, PermissionError) as exc:
             decky.logger.error(f"Manual patch validation failed: {exc}")
             return {"status": "error", "message": str(exc)}
 
-        return self._manual_patch_directory_impl(target_dir)
+        return self._manual_patch_directory_impl(target_dir, dll_name)
 
     async def manual_unpatch_directory(self, directory: str) -> dict:
         try:
