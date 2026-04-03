@@ -47,7 +47,7 @@ export const STYLES = {
 
 // Proxy DLL name options for OptiScaler injection
 export const PROXY_DLL_OPTIONS = [
-  { value: "dxgi.dll",       label: "dxgi.dll",       hint: "Works for most DX12 games. Default." },
+  { value: "dxgi.dll",       label: "dxgi.dll (default)",  hint: "Works for most DX12 games. Default." },
   { value: "winmm.dll",      label: "winmm.dll",      hint: "Use when dxgi.dll conflicts with an existing game file." },
   { value: "version.dll",    label: "version.dll",    hint: "Common fallback; works well with many launchers." },
   { value: "dbghelp.dll",    label: "dbghelp.dll",    hint: "Use for debug helper hook paths." },
