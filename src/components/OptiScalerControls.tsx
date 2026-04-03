@@ -11,6 +11,7 @@ import { InstructionCard } from "./InstructionCard";
 import { OptiScalerWiki } from "./OptiScalerWiki";
 import { UninstallButton } from "./UninstallButton";
 import { ManualPatchControls } from "./CustomPathOverride";
+import { SteamGamePatcher } from "./SteamGamePatcher";
 
 interface OptiScalerControlsProps {
   pathExists: boolean | null;
@@ -91,6 +92,12 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
         </PanelSectionRow>
       )}
 
+      {pathExists === true && (
+        <SteamGamePatcher dllName={dllName} />
+      )}
+
+      <ClipboardCommands pathExists={pathExists} dllName={dllName} />
+
       <ManualPatchControls
         isAvailable={pathExists === true}
         onManualModeChange={setManualModeEnabled}
@@ -98,11 +105,7 @@ export function OptiScalerControls({ pathExists, setPathExists }: OptiScalerCont
       />
 
       {!manualModeEnabled && (
-        <>
-          <ClipboardCommands pathExists={pathExists} dllName={dllName} />
-          
-          <InstructionCard pathExists={pathExists} />
-        </>
+        <InstructionCard pathExists={pathExists} />
       )}
       <OptiScalerWiki pathExists={pathExists} />
       
