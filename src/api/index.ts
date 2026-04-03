@@ -28,7 +28,7 @@ export const getPathDefaults = callable<
 >("get_path_defaults");
 
 export const runManualPatch = callable<
-  [string],
+  [string, string],
   { status: string; message?: string; output?: string }
 >("manual_patch_directory");
 
