@@ -156,8 +156,11 @@ class Plugin:
                 with open(ini_file, 'r') as f:
                     content = f.read()
                 
-                # Replace FGType=auto with FGType=nukems
-                updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
+                # Replace FGInput=auto with FGInput=nukems (final v0.9+ split FGType into FGInput/FGOutput)
+                updated_content = re.sub(r'FGInput\s*=\s*auto', 'FGInput=nukems', content)
+
+                # Replace FGOutput=auto with FGOutput=nukems
+                updated_content = re.sub(r'FGOutput\s*=\s*auto', 'FGOutput=nukems', updated_content)
                 
                 # Replace Fsr4Update=auto with Fsr4Update=true
                 updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
@@ -174,7 +177,7 @@ class Plugin:
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
                 
-                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins, UseHQFont=false")
+                decky.logger.info("Modified OptiScaler.ini to set FGInput=nukems, FGOutput=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins, UseHQFont=false")
                 return True
             else:
                 decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
@@ -267,7 +270,7 @@ class Plugin:
                 }
             
             # Copy additional individual files from bin directory
-            # Note: v0.9.0-pre3+ includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
+            # Note: v0.9.0-final includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
             # Only copy files that aren't already in the archive (separate remote binaries)
             additional_files = [
                 "nvngx.dll",  # nvidia dll from streamline sdk, not bundled in opti
@@ -433,7 +436,7 @@ class Plugin:
             "OptiScaler.dll",
             "OptiScaler.ini",
             "dlssg_to_fsr3_amd_is_better.dll", 
-            "fakenvapi.dll",        # v0.9.0-pre3+ includes fakenvapi.dll in archive
+            "fakenvapi.dll",        # v0.9.0-final includes fakenvapi.dll in archive
             "fakenvapi.ini", 
             "nvngx.dll",
             "amd_fidelityfx_dx12.dll",
@@ -442,8 +445,8 @@ class Plugin:
             "amd_fidelityfx_vk.dll", 
             "libxess.dll",
             "libxess_dx11.dll",
-            "libxess_fg.dll",       # New in v0.9.0-pre4
-            "libxell.dll",          # New in v0.9.0-pre4
+            "libxess_fg.dll",       # added in v0.9.0
+            "libxell.dll",          # added in v0.9.0
             "fgmod",
             "fgmod-uninstaller.sh",
             "update-optiscaler-config.py"
@@ -549,6 +552,14 @@ class Plugin:
             else:
                 decky.logger.warning("Plugins directory missing in fgmod bundle")
 
+            d3d12_src = fgmod_path / "D3D12_Optiscaler"
+            d3d12_dest = directory / "D3D12_Optiscaler"
+            if d3d12_src.exists():
+                shutil.copytree(d3d12_src, d3d12_dest, dirs_exist_ok=True)
+                decky.logger.info(f"Copied D3D12_Optiscaler directory to {d3d12_dest}")
+            else:
+                decky.logger.warning("D3D12_Optiscaler directory missing in fgmod bundle")
+
             copied_support = []
             missing_support = []
             for filename in SUPPORT_FILES:
@@ -610,6 +621,11 @@ class Plugin:
             if plugins_dir.exists():
                 shutil.rmtree(plugins_dir, ignore_errors=True)
                 decky.logger.info(f"Removed plugins directory at {plugins_dir}")
+
+            d3d12_dir = directory / "D3D12_Optiscaler"
+            if d3d12_dir.exists():
+                shutil.rmtree(d3d12_dir, ignore_errors=True)
+                decky.logger.info(f"Removed D3D12_Optiscaler directory from {d3d12_dir}")
 
             restored_backups = []
             for dll in ORIGINAL_DLL_BACKUPS:

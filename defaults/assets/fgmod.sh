@@ -146,6 +146,15 @@ else
   echo "⚠️ No plugins directory found in fgmod"
 fi
 
+# === D3D12_Optiscaler Directory (required for FSR4/FidelityFX DX12 path) ===
+if [[ -d "$fgmod_path/D3D12_Optiscaler" ]]; then
+  echo "📦 Installing D3D12_Optiscaler directory"
+  cp -r "$fgmod_path/D3D12_Optiscaler" "$exe_folder_path/" || true
+  logger -t fgmod "📦 D3D12_Optiscaler directory installed to $exe_folder_path"
+else
+  echo "⚠️ No D3D12_Optiscaler directory found in fgmod"
+fi
+
 # === Supporting Libraries ===
 cp -f "$fgmod_path/libxess.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/libxess_dx11.dll" "$exe_folder_path/" || true
@@ -159,7 +168,7 @@ cp -f "$fgmod_path/nvngx.dll" "$exe_folder_path/" || true
 
 # === Nukem FG Mod Files (now in fgmod directory) ===
 cp -f "$fgmod_path/dlssg_to_fsr3_amd_is_better.dll" "$exe_folder_path/" || true
-# Note: dlssg_to_fsr3.ini is not included in v0.9.0-pre4 archive
+# Note: dlssg_to_fsr3.ini is not included in v0.9.0-final archive
 
 # === FakeNVAPI Files ===
 # Remove legacy nvapi64.dll to avoid conflicts
@@ -174,7 +183,7 @@ echo "📦 Installed fakenvapi.dll and fakenvapi.ini"
 # === Additional Support Files ===
 # cp -f "$fgmod_path/d3dcompiler_47.dll" "$exe_folder_path/" || true
 
-# Note: d3dcompiler_47.dll is not included in v0.9.0-pre4 archive
+# Note: d3dcompiler_47.dll is not included in v0.9.0-final archive
 
 echo "✅ Installation completed successfully!"
 echo "📄 For Steam, add this to the launch options: \"$fgmod_path/fgmod\" %COMMAND%"
