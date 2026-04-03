@@ -19,13 +19,13 @@ export const ResultDisplay: FC<ResultDisplayProps> = ({ result }) => {
       <div style={isSuccess ? STYLES.statusInstalled : STYLES.statusNotInstalled}>
         {isSuccess ? (
           <>
-            ✅ {result.output?.includes("uninstall") || result.output?.includes("remov") 
+            {result.output?.includes("uninstall") || result.output?.includes("remov") 
               ? "OptiScaler mod removed successfully" 
               : "OptiScaler mod installed successfully"}
           </>
         ) : (
           <>
-            ❌ <strong>Error:</strong> {result.message || "Operation failed"}
+            <strong>Error:</strong> {result.message || "Operation failed"}
           </>
         )}
         {result.output && !isSuccess && (

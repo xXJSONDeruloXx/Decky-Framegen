@@ -159,10 +159,10 @@ export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
       setSteamLaunchOptions(Number(selectedAppId), targetCommand);
       setLaunchOptions(targetCommand);
       setResultMessage(
-        `✅ Launch options set for ${selectedGame?.name ?? selectedAppId}`
+        `Launch options set for ${selectedGame?.name ?? selectedAppId}`
       );
     } catch (e) {
-      setResultMessage(`❌ ${e instanceof Error ? e.message : String(e)}`);
+      setResultMessage(`Error: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }
@@ -176,10 +176,10 @@ export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
       setSteamLaunchOptions(Number(selectedAppId), stripped);
       setLaunchOptions(stripped);
       setResultMessage(
-        `✅ Removed fgmod from ${selectedGame?.name ?? selectedAppId}`
+        `Removed fgmod from ${selectedGame?.name ?? selectedAppId}`
       );
     } catch (e) {
-      setResultMessage(`❌ ${e instanceof Error ? e.message : String(e)}`);
+      setResultMessage(`Error: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }

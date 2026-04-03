@@ -4,13 +4,13 @@ set -x
 exec > >(tee -i /tmp/fgmod-install.log) 2>&1
 
 error_exit() {
-  echo "❌ $1"
+  echo " $1"
   if [[ -n $STEAM_ZENITY ]]; then
     $STEAM_ZENITY --error --text "$1"
   else 
     zenity --error --text "$1" || echo "Zenity failed to display error"
   fi
-  logger -t fgmod "❌ ERROR: $1"
+  logger -t fgmod "ERROR: $1"
   exit 1
 }
 
@@ -89,12 +89,12 @@ if [[ -d "$exe_folder_path/Engine" ]]; then
   exe_folder_path=$(dirname "$ue_exe")
 fi
 
-[[ ! -d "$exe_folder_path" ]] && error_exit "❌ Could not resolve game directory!"
-[[ ! -w "$exe_folder_path" ]] && error_exit "🛑 No write permission to the game folder!"
+[[ ! -d "$exe_folder_path" ]] && error_exit " Could not resolve game directory!"
+[[ ! -w "$exe_folder_path" ]] && error_exit " No write permission to the game folder!"
 
-logger -t fgmod "🟢 Target directory: $exe_folder_path"
-logger -t fgmod "🧩 Using DLL name: $dll_name"
-logger -t fgmod "📄 Preserve INI: $preserve_ini"
+logger -t fgmod "Target directory: $exe_folder_path"
+logger -t fgmod "Using DLL name: $dll_name"
+logger -t fgmod "Preserve INI: $preserve_ini"
 
 # === Cleanup Old Injectors ===
 rm -f "$exe_folder_path"/{dxgi.dll,winmm.dll,nvngx.dll,_nvngx.dll,nvngx-wrapper.dll,dlss-enabler.dll,OptiScaler.dll}
@@ -107,25 +107,25 @@ done
 
 # === Remove nvapi64.dll and its backup (conflicts from previous fakenvapi versions) ===
 rm -f "$exe_folder_path/nvapi64.dll" "$exe_folder_path/nvapi64.dll.b"
-echo "🧹 Cleaned up nvapi64.dll and backup (legacy fakenvapi conflicts)"
+echo " Cleaned up nvapi64.dll and backup (legacy fakenvapi conflicts)"
 
 # === Core Install ===
 if [[ -f "$fgmod_path/renames/$dll_name" ]]; then
-  echo "✅ Using pre-renamed $dll_name"
-  cp "$fgmod_path/renames/$dll_name" "$exe_folder_path/$dll_name" || error_exit "❌ Failed to copy $dll_name"
+  echo " Using pre-renamed $dll_name"
+  cp "$fgmod_path/renames/$dll_name" "$exe_folder_path/$dll_name" || error_exit " Failed to copy $dll_name"
 else
-  echo "⚠️ Pre-renamed $dll_name not found, falling back to OptiScaler.dll"
-  cp "$fgmod_path/OptiScaler.dll" "$exe_folder_path/$dll_name" || error_exit "❌ Failed to copy OptiScaler.dll as $dll_name"
+  echo " Pre-renamed $dll_name not found, falling back to OptiScaler.dll"
+  cp "$fgmod_path/OptiScaler.dll" "$exe_folder_path/$dll_name" || error_exit " Failed to copy OptiScaler.dll as $dll_name"
 fi
 
 # === OptiScaler.ini Handling ===
 if [[ "$preserve_ini" == "true" && -f "$exe_folder_path/OptiScaler.ini" ]]; then
-  echo "📄 Preserving existing OptiScaler.ini (user settings retained)"
-  logger -t fgmod "📄 Existing OptiScaler.ini preserved in $exe_folder_path"
+  echo " Preserving existing OptiScaler.ini (user settings retained)"
+  logger -t fgmod "Existing OptiScaler.ini preserved in $exe_folder_path"
 else
-  echo "📄 Installing OptiScaler.ini from plugin defaults"
-  cp "$fgmod_path/OptiScaler.ini" "$exe_folder_path/OptiScaler.ini" || error_exit "❌ Failed to copy OptiScaler.ini"
-  logger -t fgmod "📄 OptiScaler.ini installed to $exe_folder_path"
+  echo " Installing OptiScaler.ini from plugin defaults"
+  cp "$fgmod_path/OptiScaler.ini" "$exe_folder_path/OptiScaler.ini" || error_exit " Failed to copy OptiScaler.ini"
+  logger -t fgmod "OptiScaler.ini installed to $exe_folder_path"
 fi
 
 # === OptiScaler env variables Handling ===
@@ -144,8 +144,8 @@ sed -i 's/^UseHQFont[[:space:]]*=[[:space:]]*auto$/UseHQFont=false/' "$exe_folde
 _fgtype_ini="$exe_folder_path/OptiScaler.ini"
 if grep -q '^FGType=' "$_fgtype_ini" 2>/dev/null; then
   _fgtype_val=$(sed -n 's/^FGType=\(.*\)/\1/p' "$_fgtype_ini")
-  echo "🔄 Migrating FGType=$_fgtype_val → FGInput/FGOutput in OptiScaler.ini"
-  logger -t fgmod "🔄 Migrating FGType=$_fgtype_val → FGInput/FGOutput"
+  echo " Migrating FGType=$_fgtype_val → FGInput/FGOutput in OptiScaler.ini"
+  logger -t fgmod "Migrating FGType=$_fgtype_val → FGInput/FGOutput"
   if grep -q '^FGInput=' "$_fgtype_ini"; then
     # FGInput already present — INI already in v0.9-final format; just drop FGType
     sed -i '/^FGType=/d' "$_fgtype_ini" || true
@@ -158,20 +158,20 @@ unset _fgtype_ini _fgtype_val
 
 # === ASI Plugins Directory ===
 if [[ -d "$fgmod_path/plugins" ]]; then
-  echo "🔌 Installing ASI plugins directory"
+  echo " Installing ASI plugins directory"
   cp -r "$fgmod_path/plugins" "$exe_folder_path/" || true
-  logger -t fgmod "🔌 ASI plugins directory installed to $exe_folder_path"
+  logger -t fgmod "ASI plugins directory installed to $exe_folder_path"
 else
-  echo "⚠️ No plugins directory found in fgmod"
+  echo " No plugins directory found in fgmod"
 fi
 
 # === D3D12_Optiscaler Directory (required for FSR4/FidelityFX DX12 path) ===
 if [[ -d "$fgmod_path/D3D12_Optiscaler" ]]; then
-  echo "📦 Installing D3D12_Optiscaler directory"
+  echo " Installing D3D12_Optiscaler directory"
   cp -r "$fgmod_path/D3D12_Optiscaler" "$exe_folder_path/" || true
-  logger -t fgmod "📦 D3D12_Optiscaler directory installed to $exe_folder_path"
+  logger -t fgmod "D3D12_Optiscaler directory installed to $exe_folder_path"
 else
-  echo "⚠️ No D3D12_Optiscaler directory found in fgmod"
+  echo " No D3D12_Optiscaler directory found in fgmod"
 fi
 
 # === Supporting Libraries ===
@@ -192,22 +192,22 @@ cp -f "$fgmod_path/dlssg_to_fsr3_amd_is_better.dll" "$exe_folder_path/" || true
 # === FakeNVAPI Files ===
 # Remove legacy nvapi64.dll to avoid conflicts
 # rm -f "$exe_folder_path/nvapi64.dll"
-# echo "🧹 Removed legacy nvapi64.dll"
+# echo " Removed legacy nvapi64.dll"
 
 # Copy fakenvapi.dll with original name (v1.3.8.1) 
 cp -f "$fgmod_path/fakenvapi.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/fakenvapi.ini" "$exe_folder_path/" || true
-echo "📦 Installed fakenvapi.dll and fakenvapi.ini"
+echo " Installed fakenvapi.dll and fakenvapi.ini"
 
 # === Additional Support Files ===
 # cp -f "$fgmod_path/d3dcompiler_47.dll" "$exe_folder_path/" || true
 
 # Note: d3dcompiler_47.dll is not included in v0.9.0-final archive
 
-echo "✅ Installation completed successfully!"
-echo "📄 For Steam, add this to the launch options: \"$fgmod_path/fgmod\" %COMMAND%"
-echo "📄 For Heroic, add this as a new wrapper: \"$fgmod_path/fgmod\""
-logger -t fgmod "🟢 Installation completed successfully for $exe_folder_path"
+echo " Installation completed successfully!"
+echo " For Steam, add this to the launch options: \"$fgmod_path/fgmod\" %COMMAND%"
+echo " For Heroic, add this as a new wrapper: \"$fgmod_path/fgmod\""
+logger -t fgmod "Installation completed successfully for $exe_folder_path"
 
 # === Execute original command ===
 if [[ $# -gt 1 ]]; then

@@ -239,9 +239,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName }
               <Field
                 label="Picker error"
                 description={pickerState.lastError}
-              >
-                ⚠️
-              </Field>
+              />
             </PanelSectionRow>
           )}
 
