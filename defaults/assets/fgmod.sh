@@ -137,6 +137,25 @@ fi
 # an external TTF that is not present. Only normalize the default auto value.
 sed -i 's/^UseHQFont[[:space:]]*=[[:space:]]*auto$/UseHQFont=false/' "$exe_folder_path/OptiScaler.ini" || true
 
+# === Migrate FGType → FGInput/FGOutput (pre-v0.9-final INIs) ===
+# v0.9-final split the single FGType key into FGInput + FGOutput. Games that were
+# patched with an older build will have FGType=<value> with no FGInput/FGOutput,
+# causing the new DLL to silently use nofg. Fix that here on every launch.
+_fgtype_ini="$exe_folder_path/OptiScaler.ini"
+if grep -q '^FGType=' "$_fgtype_ini" 2>/dev/null; then
+  _fgtype_val=$(sed -n 's/^FGType=\(.*\)/\1/p' "$_fgtype_ini")
+  echo "🔄 Migrating FGType=$_fgtype_val → FGInput/FGOutput in OptiScaler.ini"
+  logger -t fgmod "🔄 Migrating FGType=$_fgtype_val → FGInput/FGOutput"
+  if grep -q '^FGInput=' "$_fgtype_ini"; then
+    # FGInput already present — INI already in v0.9-final format; just drop FGType
+    sed -i '/^FGType=/d' "$_fgtype_ini" || true
+  else
+    # Replace FGType=X with FGInput=X + FGOutput=X
+    sed -i "s/^FGType=.*$/FGInput=$_fgtype_val\nFGOutput=$_fgtype_val/" "$_fgtype_ini" || true
+  fi
+fi
+unset _fgtype_ini _fgtype_val
+
 # === ASI Plugins Directory ===
 if [[ -d "$fgmod_path/plugins" ]]; then
   echo "🔌 Installing ASI plugins directory"

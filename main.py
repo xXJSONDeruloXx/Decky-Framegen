@@ -128,6 +128,50 @@ class Plugin:
             decky.logger.error(f"Failed to copy launcher scripts: {e}")
             return False
     
+    def _migrate_optiscaler_ini(self, ini_file):
+        """Migrate pre-v0.9-final OptiScaler.ini: replace FGType with FGInput + FGOutput.
+
+        v0.9-final split the single FGType key into separate FGInput and FGOutput keys.
+        Games already patched with an older build will have FGType=<value> in their
+        per-game INI but no FGInput/FGOutput entries, causing the new DLL to silently
+        fall back to nofg.  This migration runs at patch-time and at every fgmod.sh
+        launch so users never have to manually touch their INI.
+        """
+        try:
+            if not ini_file.exists():
+                return False
+
+            with open(ini_file, 'r') as f:
+                content = f.read()
+
+            fg_type_match = re.search(r'^FGType\s*=\s*(\S+)', content, re.MULTILINE)
+            if not fg_type_match:
+                return True  # Nothing to migrate
+
+            fg_value = fg_type_match.group(1)
+
+            if re.search(r'^FGInput\s*=', content, re.MULTILINE):
+                # FGInput already present (INI already in v0.9-final format);
+                # just remove the now-unknown FGType line.
+                content = re.sub(r'^FGType\s*=\s*\S+\n?', '', content, flags=re.MULTILINE)
+                decky.logger.info(f"Removed stale FGType from {ini_file} (FGInput already present)")
+            else:
+                # Replace the single FGType=X line with FGInput=X then FGOutput=X
+                content = re.sub(
+                    r'^FGType\s*=\s*\S+',
+                    f'FGInput={fg_value}\nFGOutput={fg_value}',
+                    content,
+                    flags=re.MULTILINE
+                )
+                decky.logger.info(f"Migrated FGType={fg_value} → FGInput={fg_value}, FGOutput={fg_value} in {ini_file}")
+
+            with open(ini_file, 'w') as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            decky.logger.error(f"Failed to migrate OptiScaler.ini: {e}")
+            return False
+
     def _disable_hq_font_auto(self, ini_file):
         """Disable the new HQ font auto mode to avoid missing font assertions on Wine/Proton."""
         try:
@@ -542,6 +586,7 @@ class Plugin:
                 decky.logger.warning("No OptiScaler.ini found to copy")
 
             if target_ini.exists():
+                self._migrate_optiscaler_ini(target_ini)
                 self._disable_hq_font_auto(target_ini)
 
             plugins_src = fgmod_path / "plugins"
