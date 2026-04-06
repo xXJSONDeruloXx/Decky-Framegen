@@ -10,6 +10,16 @@ from pathlib import Path
 # Set to False or comment out this constant to skip the overwrite by default.
 UPSCALER_OVERWRITE_ENABLED = True
 
+VALID_DLL_NAMES = {
+    "dxgi.dll",
+    "winmm.dll",
+    "dbghelp.dll",
+    "version.dll",
+    "wininet.dll",
+    "winhttp.dll",
+    "OptiScaler.asi",
+}
+
 INJECTOR_FILENAMES = [
     "dxgi.dll",
     "winmm.dll",
@@ -128,6 +138,50 @@ class Plugin:
             decky.logger.error(f"Failed to copy launcher scripts: {e}")
             return False
     
+    def _migrate_optiscaler_ini(self, ini_file):
+        """Migrate pre-v0.9-final OptiScaler.ini: replace FGType with FGInput + FGOutput.
+
+        v0.9-final split the single FGType key into separate FGInput and FGOutput keys.
+        Games already patched with an older build will have FGType=<value> in their
+        per-game INI but no FGInput/FGOutput entries, causing the new DLL to silently
+        fall back to nofg.  This migration runs at patch-time and at every fgmod.sh
+        launch so users never have to manually touch their INI.
+        """
+        try:
+            if not ini_file.exists():
+                return False
+
+            with open(ini_file, 'r') as f:
+                content = f.read()
+
+            fg_type_match = re.search(r'^FGType\s*=\s*(\S+)', content, re.MULTILINE)
+            if not fg_type_match:
+                return True  # Nothing to migrate
+
+            fg_value = fg_type_match.group(1)
+
+            if re.search(r'^FGInput\s*=', content, re.MULTILINE):
+                # FGInput already present (INI already in v0.9-final format);
+                # just remove the now-unknown FGType line.
+                content = re.sub(r'^FGType\s*=\s*\S+\n?', '', content, flags=re.MULTILINE)
+                decky.logger.info(f"Removed stale FGType from {ini_file} (FGInput already present)")
+            else:
+                # Replace the single FGType=X line with FGInput=X then FGOutput=X
+                content = re.sub(
+                    r'^FGType\s*=\s*\S+',
+                    f'FGInput={fg_value}\nFGOutput={fg_value}',
+                    content,
+                    flags=re.MULTILINE
+                )
+                decky.logger.info(f"Migrated FGType={fg_value} → FGInput={fg_value}, FGOutput={fg_value} in {ini_file}")
+
+            with open(ini_file, 'w') as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            decky.logger.error(f"Failed to migrate OptiScaler.ini: {e}")
+            return False
+
     def _disable_hq_font_auto(self, ini_file):
         """Disable the new HQ font auto mode to avoid missing font assertions on Wine/Proton."""
         try:
@@ -156,8 +210,11 @@ class Plugin:
                 with open(ini_file, 'r') as f:
                     content = f.read()
                 
-                # Replace FGType=auto with FGType=nukems
-                updated_content = re.sub(r'FGType\s*=\s*auto', 'FGType=nukems', content)
+                # Replace FGInput=auto with FGInput=nukems (final v0.9+ split FGType into FGInput/FGOutput)
+                updated_content = re.sub(r'FGInput\s*=\s*auto', 'FGInput=nukems', content)
+
+                # Replace FGOutput=auto with FGOutput=nukems
+                updated_content = re.sub(r'FGOutput\s*=\s*auto', 'FGOutput=nukems', updated_content)
                 
                 # Replace Fsr4Update=auto with Fsr4Update=true
                 updated_content = re.sub(r'Fsr4Update\s*=\s*auto', 'Fsr4Update=true', updated_content)
@@ -174,7 +231,7 @@ class Plugin:
                 with open(ini_file, 'w') as f:
                     f.write(updated_content)
                 
-                decky.logger.info("Modified OptiScaler.ini to set FGType=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins, UseHQFont=false")
+                decky.logger.info("Modified OptiScaler.ini to set FGInput=nukems, FGOutput=nukems, Fsr4Update=true, LoadAsiPlugins=true, Path=plugins, UseHQFont=false")
                 return True
             else:
                 decky.logger.warning(f"OptiScaler.ini not found at {ini_file}")
@@ -267,7 +324,7 @@ class Plugin:
                 }
             
             # Copy additional individual files from bin directory
-            # Note: v0.9.0-pre3+ includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
+            # Note: v0.9.0-final includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
             # Only copy files that aren't already in the archive (separate remote binaries)
             additional_files = [
                 "nvngx.dll",  # nvidia dll from streamline sdk, not bundled in opti
@@ -433,7 +490,7 @@ class Plugin:
             "OptiScaler.dll",
             "OptiScaler.ini",
             "dlssg_to_fsr3_amd_is_better.dll", 
-            "fakenvapi.dll",        # v0.9.0-pre3+ includes fakenvapi.dll in archive
+            "fakenvapi.dll",        # v0.9.0-final includes fakenvapi.dll in archive
             "fakenvapi.ini", 
             "nvngx.dll",
             "amd_fidelityfx_dx12.dll",
@@ -442,8 +499,8 @@ class Plugin:
             "amd_fidelityfx_vk.dll", 
             "libxess.dll",
             "libxess_dx11.dll",
-            "libxess_fg.dll",       # New in v0.9.0-pre4
-            "libxell.dll",          # New in v0.9.0-pre4
+            "libxess_fg.dll",       # added in v0.9.0
+            "libxell.dll",          # added in v0.9.0
             "fgmod",
             "fgmod-uninstaller.sh",
             "update-optiscaler-config.py"
@@ -476,7 +533,7 @@ class Plugin:
         decky.logger.info(f"Resolved directory {directory} to absolute path {target}")
         return target
 
-    def _manual_patch_directory_impl(self, directory: Path) -> dict:
+    def _manual_patch_directory_impl(self, directory: Path, dll_name: str = "dxgi.dll") -> dict:
         fgmod_path = Path(decky.HOME) / "fgmod"
         if not fgmod_path.exists():
             return {
@@ -491,7 +548,6 @@ class Plugin:
                 "message": "OptiScaler.dll not found in ~/fgmod. Reinstall OptiScaler.",
             }
 
-        dll_name = "dxgi.dll"
         preserve_ini = True
 
         try:
@@ -539,6 +595,7 @@ class Plugin:
                 decky.logger.warning("No OptiScaler.ini found to copy")
 
             if target_ini.exists():
+                self._migrate_optiscaler_ini(target_ini)
                 self._disable_hq_font_auto(target_ini)
 
             plugins_src = fgmod_path / "plugins"
@@ -548,6 +605,14 @@ class Plugin:
                 decky.logger.info(f"Synced plugins directory from {plugins_src} to {plugins_dest}")
             else:
                 decky.logger.warning("Plugins directory missing in fgmod bundle")
+
+            d3d12_src = fgmod_path / "D3D12_Optiscaler"
+            d3d12_dest = directory / "D3D12_Optiscaler"
+            if d3d12_src.exists():
+                shutil.copytree(d3d12_src, d3d12_dest, dirs_exist_ok=True)
+                decky.logger.info(f"Copied D3D12_Optiscaler directory to {d3d12_dest}")
+            else:
+                decky.logger.warning("D3D12_Optiscaler directory missing in fgmod bundle")
 
             copied_support = []
             missing_support = []
@@ -610,6 +675,11 @@ class Plugin:
             if plugins_dir.exists():
                 shutil.rmtree(plugins_dir, ignore_errors=True)
                 decky.logger.info(f"Removed plugins directory at {plugins_dir}")
+
+            d3d12_dir = directory / "D3D12_Optiscaler"
+            if d3d12_dir.exists():
+                shutil.rmtree(d3d12_dir, ignore_errors=True)
+                decky.logger.info(f"Removed D3D12_Optiscaler directory from {d3d12_dir}")
 
             restored_backups = []
             for dll in ORIGINAL_DLL_BACKUPS:
@@ -711,14 +781,16 @@ class Plugin:
     async def log_error(self, error: str) -> None:
         decky.logger.error(f"FRONTEND: {error}")
 
-    async def manual_patch_directory(self, directory: str) -> dict:
+    async def manual_patch_directory(self, directory: str, dll_name: str = "dxgi.dll") -> dict:
+        if dll_name not in VALID_DLL_NAMES:
+            return {"status": "error", "message": f"Invalid proxy DLL name: {dll_name}"}
         try:
             target_dir = self._resolve_target_directory(directory)
         except (FileNotFoundError, NotADirectoryError, PermissionError) as exc:
             decky.logger.error(f"Manual patch validation failed: {exc}")
             return {"status": "error", "message": str(exc)}
 
-        return self._manual_patch_directory_impl(target_dir)
+        return self._manual_patch_directory_impl(target_dir, dll_name)
 
     async def manual_unpatch_directory(self, directory: str) -> dict:
         try:

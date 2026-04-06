@@ -42,14 +42,14 @@ export function InstalledGamesSection() {
       <ConfirmModal 
         strTitle={`Enable Frame Generation for ${selectedGame.name}?`}
         strDescription={
-          "⚠️ Important: This plugin does not automatically unpatch games when uninstalled. If you uninstall this plugin or experience game issues, use the 'Disable Frame Generation' option or verify game file integrity through Steam."
+          "Important: This plugin does not automatically unpatch games when uninstalled. If you uninstall this plugin or experience game issues, use the 'Disable Frame Generation' option or verify game file integrity through Steam."
         }
         strOKButtonText="Enable Frame Generation"
         strCancelButtonText="Cancel"
         onOK={async () => {
           try {
             await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
-            setResult(`✓ Frame generation enabled for ${selectedGame.name}. Launch the game, enable DLSS in graphics settings, then press Insert to access OptiScaler options.`);
+            setResult(`Frame generation enabled for ${selectedGame.name}. Launch the game, enable DLSS in graphics settings, then press Insert to access OptiScaler options.`);
           } catch (error) {
             logError('handlePatchClick: ' + String(error));
             setResult(error instanceof Error ? `Error: ${error.message}` : 'Error enabling frame generation');
@@ -64,7 +64,7 @@ export function InstalledGamesSection() {
 
     try {
       await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
-      setResult(`✓ Frame generation will be disabled on next launch of ${selectedGame.name}.`);
+      setResult(`Frame generation will be disabled on next launch of ${selectedGame.name}.`);
     } catch (error) {
       logError('handleUnpatchClick: ' + String(error));
       setResult(error instanceof Error ? `Error: ${error.message}` : 'Error disabling frame generation');
@@ -96,7 +96,7 @@ export function InstalledGamesSection() {
             ...STYLES.preWrap,
             ...(result.includes('Error') ? STYLES.statusNotInstalled : STYLES.statusInstalled)
           }}>
-            {result.includes('Error') ? '❌' : '✅'} {result}
+            {result}
           </div>
         </PanelSectionRow>
       ) : null}

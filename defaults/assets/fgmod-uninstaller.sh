@@ -4,13 +4,13 @@ set -x
 exec > >(tee -i /tmp/fgmod-uninstaller.log) 2>&1
 
 error_exit() {
-  echo "❌ $1"
+  echo " $1"
   if [[ -n $STEAM_ZENITY ]]; then
     $STEAM_ZENITY --error --text "$1"
   else 
     zenity --error --text "$1" || echo "Zenity failed to display error"
   fi
-  logger -t fgmod-uninstaller "❌ ERROR: $1"
+  logger -t fgmod-uninstaller "ERROR: $1"
   exit 1
 }
 
@@ -101,20 +101,20 @@ cd "$exe_folder_path" || error_exit "Failed to change directory to $exe_folder_p
 # Verify current directory before proceeding
 [[ "$(pwd)" != "$exe_folder_path" ]] && error_exit "Unexpected working directory: $(pwd)"
 
-logger -t fgmod-uninstaller "🟢 Uninstalling from: $exe_folder_path"
+logger -t fgmod-uninstaller "Uninstalling from: $exe_folder_path"
 
 # === Remove OptiScaler Files ===
-echo "🧹 Removing OptiScaler files..."
+echo " Removing OptiScaler files..."
 rm -f "OptiScaler.dll" "dxgi.dll" "winmm.dll" "dbghelp.dll" "version.dll" "wininet.dll" "winhttp.dll" "OptiScaler.asi"
 rm -f "OptiScaler.ini" "OptiScaler.log"
 
 # === Remove Nukem FG Mod Files ===
-echo "🧹 Removing Nukem FG Mod files..."
+echo " Removing Nukem FG Mod files..."
 rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini" "dlssg_to_fsr3.log"
 rm -f "nvapi64.dll" "fakenvapi.ini" "fakenvapi.log"
 
 # === Remove Supporting Libraries ===
-echo "🧹 Removing supporting libraries..."
+echo " Removing supporting libraries..."
 rm -f "nvngx.dll" "nvngx.ini"
 # Only remove files if backups exist (to avoid removing restored originals)
 [[ -f "libxess.dll.b" ]] && rm -f "libxess.dll"
@@ -127,49 +127,52 @@ rm -f "nvngx.dll" "nvngx.ini"
 [[ -f "amd_fidelityfx_vk.dll.b" ]] && rm -f "amd_fidelityfx_vk.dll"
 
 # === Remove FG Mod Files ===
-echo "🧹 Removing frame generation mod files..."
+echo " Removing frame generation mod files..."
 rm -f "dlssg_to_fsr3_amd_is_better.dll" "dlssg_to_fsr3.ini"
 
 # === Remove NVAPI Files (Current and Legacy) ===
-echo "🧹 Removing NVAPI files..."
-rm -f "fakenvapi.dll" "fakenvapi.ini"  # Current v0.9.0-pre4 approach
+echo " Removing NVAPI files..."
+rm -f "fakenvapi.dll" "fakenvapi.ini"  # v0.9.0-final
 rm -f "nvapi64.dll" "nvapi64.dll.b"    # Legacy cleanup for older versions and backups
 
 # === Remove ASI Plugins ===
-echo "🧹 Removing ASI plugins directory..."
+echo " Removing ASI plugins directory..."
 rm -rf "plugins"
 
+# === Remove D3D12_Optiscaler directory (required by v0.9.0-final) ===
+rm -rf "D3D12_Optiscaler"
+
 # === Remove Legacy Files ===
-echo "🧹 Removing legacy files..."
+echo " Removing legacy files..."
 rm -f "dlss-enabler.dll" "dlss-enabler-upscaler.dll" "dlss-enabler.log"
 rm -f "nvngx-wrapper.dll" "_nvngx.dll"
 rm -f "dlssg_to_fsr3_amd_is_better-3.0.dll"
 
 # === Restore Original DLLs ===
-echo "🔄 Restoring original DLLs..."
+echo " Restoring original DLLs..."
 original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
 for dll in "${original_dlls[@]}"; do
   if [[ -f "${dll}.b" ]]; then
     mv "${dll}.b" "$dll"
-    echo "✅ Restored original $dll"
-    logger -t fgmod-uninstaller "✅ Restored original $dll"
+    echo " Restored original $dll"
+    logger -t fgmod-uninstaller "Restored original $dll"
   fi
 done
 
 # === Self-remove uninstaller ===
-echo "🗑️ Removing uninstaller..."
+echo " Removing uninstaller..."
 rm -f "fgmod-uninstaller.sh"
 
-echo "✅ fgmod removed from this game successfully!"
-logger -t fgmod-uninstaller "✅ fgmod removed from $exe_folder_path"
+echo " fgmod removed from this game successfully!"
+logger -t fgmod-uninstaller "fgmod removed from $exe_folder_path"
 
 # === Execute original command if provided ===
 if [[ $# -gt 1 ]]; then
-  echo "🚀 Launching the game..."
+  echo " Launching the game..."
   export SteamDeck=0
   export WINEDLLOVERRIDES="${WINEDLLOVERRIDES},dxgi=n,b"
   exec >/dev/null 2>&1
   exec "$@"
 else
-  echo "✅ Uninstallation complete. No game specified to run."
+  echo " Uninstallation complete. No game specified to run."
 fi

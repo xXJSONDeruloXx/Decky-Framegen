@@ -36,6 +36,7 @@ const ensureDirectory = (value: string) => {
 interface ManualPatchControlsProps {
   isAvailable: boolean;
   onManualModeChange?: (enabled: boolean) => void;
+  dllName: string;
 }
 
 interface PickerState {
@@ -56,7 +57,7 @@ const formatResultMessage = (result: ApiResponse | null) => {
   return result.message || result.output || "Operation failed.";
 };
 
-export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualPatchControlsProps) => {
+export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName }: ManualPatchControlsProps) => {
   const [isEnabled, setEnabled] = useState(false);
   const [defaults, setDefaults] = useState<PathDefaults>(INITIAL_DEFAULTS);
   const [pickerState, setPickerState] = useState<PickerState>(INITIAL_PICKER_STATE);
@@ -165,7 +166,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualP
       try {
         const response =
           action === "patch"
-            ? await runManualPatch(selectedPath)
+            ? await runManualPatch(selectedPath, dllName)
             : await runManualUnpatch(selectedPath);
         setOperationResult(response ?? { status: "error", message: "No response from backend." });
       } catch (err) {
@@ -177,7 +178,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualP
         setBusy(false);
       }
     },
-    [selectedPath]
+    [selectedPath, dllName]
   );
 
   const handleToggle = (value: boolean) => {
@@ -216,7 +217,11 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualP
       {canInteract && (
         <>
           <SmartClipboardButton
-            command='WINEDLLOVERRIDES="dxgi=n,b" SteamDeck=0 %command%'
+            command={
+              dllName === "OptiScaler.asi"
+                ? "SteamDeck=0 %command%"
+                : `WINEDLLOVERRIDES="${dllName.replace(".dll", "")}=n,b" SteamDeck=0 %command%`
+            }
             buttonText="Manual launch cmd"
           />
           <PanelSectionRow>
@@ -234,9 +239,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange }: ManualP
               <Field
                 label="Picker error"
                 description={pickerState.lastError}
-              >
-                ⚠️
-              </Field>
+              />
             </PanelSectionRow>
           )}
 

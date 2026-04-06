@@ -53,13 +53,13 @@
   "remote_binary": 
   [
     {
-      "sha256hash":  "d30d98b9f58e340b8dcd5aa93fc59432e803e071cd6b207d55acc667685d79dc",
-      "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/opti-9-pre-11/Optiscaler_0.9.0-pre11.20260311._RC4.5.7z",
-      "name":  "Optiscaler_0.9.0-pre11.20260311._RC4.5.7z"
+      "sha256hash":  "a988ce2c0a86bba58a6313659d1ed2ab78f994dbdfab246394a2e4293ac68010",
+      "url":  "https://github.com/optiscaler/OptiScaler/releases/download/v0.9/Optiscaler_0.9.0-final.20260401._AF.7z",
+      "name":  "Optiscaler_0.9.0-final.20260401._AF.7z"
     },
     {
-      "sha256hash": "2604c0b392072d715b400b2f89434274de31995a4b6e68ce38250ebbd3f6c5fc",
-      "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/opti-9-pre-11/amd_fidelityfx_upscaler_dx12.dll",
+      "sha256hash": "c7720bc16bede334f59a1a32cd22edbcbbb159685ed5240e61350a5fb0bc8a94",
+      "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/bins-for-4.0.2.c/amd_fidelityfx_upscaler_dx12.dll",
       "name": "amd_fidelityfx_upscaler_dx12.dll"
     },
     {

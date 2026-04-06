@@ -2,19 +2,20 @@ import { SmartClipboardButton } from "./SmartClipboardButton";
 
 interface ClipboardCommandsProps {
   pathExists: boolean | null;
+  dllName: string;
 }
 
-export function ClipboardCommands({ pathExists }: ClipboardCommandsProps) {
+export function ClipboardCommands({ pathExists, dllName }: ClipboardCommandsProps) {
   if (pathExists !== true) return null;
 
   return (
     <>
-      <SmartClipboardButton 
-        command="~/fgmod/fgmod %command%"
+      <SmartClipboardButton
+        command={`DLL=${dllName} ~/fgmod/fgmod %command%`}
         buttonText="Copy Patch Command"
       />
-      
-      <SmartClipboardButton 
+
+      <SmartClipboardButton
         command="~/fgmod/fgmod-uninstaller.sh %command%"
         buttonText="Copy Unpatch Command"
       />
