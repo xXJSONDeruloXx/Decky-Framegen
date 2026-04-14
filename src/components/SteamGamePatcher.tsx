@@ -1,36 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ButtonItem, DropdownItem, Field, PanelSectionRow } from "@decky/ui";
-import { listInstalledGames } from "../api";
-import { createAutoCleanupTimer } from "../utils";
-import { TIMEOUTS } from "../utils/constants";
+import { toaster } from "@decky/api";
+import { listInstalledGames, getGameStatus, patchGame, unpatchGame } from "../api";
 
 // ─── SteamClient helpers ─────────────────────────────────────────────────────
 
-/**
- * Wrap the callback-based RegisterForAppDetails in a Promise.
- * Resolves with the current launch options string, or "" if SteamClient is
- * unavailable (e.g. desktop / dev mode).  Times out after 5 seconds.
- */
-const getSteamLaunchOptions = (appId: number): Promise<string> =>
+const getAppLaunchOptions = (appId: number): Promise<string> =>
   new Promise((resolve, reject) => {
-    if (
-      typeof SteamClient === "undefined" ||
-      !SteamClient?.Apps?.RegisterForAppDetails
-    ) {
+    if (typeof SteamClient === "undefined" || !SteamClient?.Apps?.RegisterForAppDetails) {
       resolve("");
       return;
     }
-
     let settled = false;
     let unregister = () => {};
-
     const timeout = window.setTimeout(() => {
       if (settled) return;
       settled = true;
       unregister();
       reject(new Error("Timed out reading launch options."));
     }, 5000);
-
     const registration = SteamClient.Apps.RegisterForAppDetails(
       appId,
       (details: { strLaunchOptions?: string }) => {
@@ -41,34 +29,32 @@ const getSteamLaunchOptions = (appId: number): Promise<string> =>
         resolve(details?.strLaunchOptions ?? "");
       }
     );
-
     unregister = registration.unregister;
   });
 
-const setSteamLaunchOptions = (appId: number, options: string): void => {
-  if (
-    typeof SteamClient === "undefined" ||
-    !SteamClient?.Apps?.SetAppLaunchOptions
-  ) {
-    throw new Error("SteamClient.Apps.SetAppLaunchOptions is not available.");
+const setAppLaunchOptions = (appId: number, options: string): void => {
+  if (typeof SteamClient !== "undefined" && SteamClient?.Apps?.SetAppLaunchOptions) {
+    SteamClient.Apps.SetAppLaunchOptions(appId, options);
   }
-  SteamClient.Apps.SetAppLaunchOptions(appId, options);
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-/** Remove any fgmod invocation from a launch options string, keeping the rest. */
-const stripFgmod = (opts: string): string =>
-  opts
-    .replace(/DLL=\S+\s+~\/fgmod\/fgmod\s+%command%/g, "")
-    .replace(/~\/fgmod\/fgmod\s+%command%/g, "")
-    .trim();
+type GameEntry = { appid: string; name: string; install_found?: boolean };
 
-/** Extract the DLL= value from a launch options string, if present. */
-const extractDllName = (opts: string): string | null => {
-  const m = opts.match(/DLL=(\S+)\s+~\/fgmod\/fgmod/);
-  return m ? m[1] : null;
+type GameStatus = {
+  status: "success" | "error";
+  message?: string;
+  install_found?: boolean;
+  patched?: boolean;
+  dll_name?: string | null;
+  target_dir?: string | null;
+  patched_at?: string | null;
 };
+
+// ─── Module-level state persistence ──────────────────────────────────────────
+
+let lastSelectedAppId = "";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -76,137 +62,164 @@ interface SteamGamePatcherProps {
   dllName: string;
 }
 
-type GameEntry = { appid: string; name: string };
-
 export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
   const [games, setGames] = useState<GameEntry[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
-  const [selectedAppId, setSelectedAppId] = useState<string>("");
-  const [launchOptions, setLaunchOptions] = useState<string>("");
-  const [launchOptionsLoading, setLaunchOptionsLoading] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState<string>(() => lastSelectedAppId);
+  const [gameStatus, setGameStatus] = useState<GameStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [busyAction, setBusyAction] = useState<"patch" | "unpatch" | null>(null);
   const [resultMessage, setResultMessage] = useState<string>("");
 
-  // Auto-clear result message
-  useEffect(() => {
-    if (resultMessage) {
-      return createAutoCleanupTimer(
-        () => setResultMessage(""),
-        TIMEOUTS.resultDisplay
-      );
-    }
-    return undefined;
-  }, [resultMessage]);
+  // ── Data loaders ───────────────────────────────────────────────────────────
 
-  // Load game list on mount
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setGamesLoading(true);
-      try {
-        const result = await listInstalledGames();
-        if (cancelled) return;
-        if (result.status === "success" && result.games.length > 0) {
-          setGames(result.games);
-          setSelectedAppId(result.games[0].appid);
-        }
-      } catch (e) {
-        console.error("SteamGamePatcher: failed to load games", e);
-      } finally {
-        if (!cancelled) setGamesLoading(false);
+  const loadGames = useCallback(async () => {
+    setGamesLoading(true);
+    try {
+      const result = await listInstalledGames();
+      if (result.status !== "success") throw new Error(result.message || "Failed to load games.");
+      const gameList = result.games as GameEntry[];
+      setGames(gameList);
+      if (!gameList.length) {
+        lastSelectedAppId = "";
+        setSelectedAppId("");
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setSelectedAppId((current) => {
+        const valid =
+          current && gameList.some((g) => g.appid === current) ? current : gameList[0].appid;
+        lastSelectedAppId = valid;
+        return valid;
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to load games.";
+      toaster.toast({ title: "Decky Framegen", body: msg });
+    } finally {
+      setGamesLoading(false);
+    }
   }, []);
 
-  // Reload launch options when selected game changes
-  useEffect(() => {
-    if (!selectedAppId) {
-      setLaunchOptions("");
+  const loadStatus = useCallback(async (appid: string) => {
+    if (!appid) {
+      setGameStatus(null);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      setLaunchOptionsLoading(true);
-      try {
-        const opts = await getSteamLaunchOptions(Number(selectedAppId));
-        if (!cancelled) setLaunchOptions(opts);
-      } catch {
-        if (!cancelled) setLaunchOptions("");
-      } finally {
-        if (!cancelled) setLaunchOptionsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedAppId]);
+    setStatusLoading(true);
+    try {
+      const result = await getGameStatus(appid);
+      setGameStatus(result as GameStatus);
+    } catch (err) {
+      setGameStatus({
+        status: "error",
+        message: err instanceof Error ? err.message : "Failed to load status.",
+      });
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
 
-  const targetCommand = `DLL=${dllName} ~/fgmod/fgmod %command%`;
-  const isManaged = launchOptions.includes("fgmod/fgmod");
-  const activeDll = useMemo(() => extractDllName(launchOptions), [launchOptions]);
+  useEffect(() => {
+    void loadGames();
+  }, [loadGames]);
+
+  useEffect(() => {
+    if (!selectedAppId) {
+      setGameStatus(null);
+      return;
+    }
+    void loadStatus(selectedAppId);
+  }, [selectedAppId, loadStatus]);
+
+  // ── Derived state ──────────────────────────────────────────────────────────
+
   const selectedGame = useMemo(
     () => games.find((g) => g.appid === selectedAppId) ?? null,
     [games, selectedAppId]
   );
 
-  const handleSet = useCallback(() => {
-    if (!selectedAppId || busy) return;
-    setBusy(true);
+  const isPatchedWithDifferentDll =
+    gameStatus?.patched && gameStatus?.dll_name && gameStatus.dll_name !== dllName;
+
+  const canPatch = Boolean(selectedGame && gameStatus?.install_found && !busyAction);
+  const canUnpatch = Boolean(selectedGame && gameStatus?.patched && !busyAction);
+
+  const patchButtonLabel = useMemo(() => {
+    if (busyAction === "patch") return "Patching...";
+    if (!selectedGame) return "Patch this game";
+    if (!gameStatus?.install_found) return "Install not found";
+    if (isPatchedWithDifferentDll) return `Switch to ${dllName}`;
+    if (gameStatus?.patched) return `Reinstall (${dllName})`;
+    return `Patch with ${dllName}`;
+  }, [busyAction, dllName, gameStatus, isPatchedWithDifferentDll, selectedGame]);
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  const handlePatch = useCallback(async () => {
+    if (!selectedGame || !selectedAppId || busyAction) return;
+    setBusyAction("patch");
+    setResultMessage("");
     try {
-      setSteamLaunchOptions(Number(selectedAppId), targetCommand);
-      setLaunchOptions(targetCommand);
-      setResultMessage(
-        `Launch options set for ${selectedGame?.name ?? selectedAppId}`
-      );
-    } catch (e) {
-      setResultMessage(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      let currentLaunchOptions = "";
+      try {
+        currentLaunchOptions = await getAppLaunchOptions(Number(selectedAppId));
+      } catch {
+        // non-fatal: proceed without current launch options
+      }
+      const result = await patchGame(selectedAppId, dllName, currentLaunchOptions);
+      if (result.status !== "success") throw new Error(result.message || "Patch failed.");
+      setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
+      const msg = result.message || `Patched ${selectedGame.name}.`;
+      setResultMessage(msg);
+      toaster.toast({ title: "Decky Framegen", body: msg });
+      await loadStatus(selectedAppId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Patch failed.";
+      setResultMessage(`Error: ${msg}`);
+      toaster.toast({ title: "Decky Framegen", body: msg });
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
-  }, [selectedAppId, targetCommand, selectedGame, busy]);
+  }, [busyAction, dllName, loadStatus, selectedAppId, selectedGame]);
 
-  const handleRemove = useCallback(() => {
-    if (!selectedAppId || busy) return;
-    setBusy(true);
+  const handleUnpatch = useCallback(async () => {
+    if (!selectedGame || !selectedAppId || busyAction) return;
+    setBusyAction("unpatch");
+    setResultMessage("");
     try {
-      const stripped = stripFgmod(launchOptions);
-      setSteamLaunchOptions(Number(selectedAppId), stripped);
-      setLaunchOptions(stripped);
-      setResultMessage(
-        `Removed fgmod from ${selectedGame?.name ?? selectedAppId}`
-      );
-    } catch (e) {
-      setResultMessage(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      const result = await unpatchGame(selectedAppId);
+      if (result.status !== "success") throw new Error(result.message || "Unpatch failed.");
+      setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
+      const msg = result.message || `Unpatched ${selectedGame.name}.`;
+      setResultMessage(msg);
+      toaster.toast({ title: "Decky Framegen", body: msg });
+      await loadStatus(selectedAppId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unpatch failed.";
+      setResultMessage(`Error: ${msg}`);
+      toaster.toast({ title: "Decky Framegen", body: msg });
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
-  }, [selectedAppId, launchOptions, selectedGame, busy]);
+  }, [busyAction, loadStatus, selectedAppId, selectedGame]);
 
-  // ── Status display ──────────────────────────────────────────────────────────
-  const statusText = useMemo(() => {
-    if (!selectedGame) return "—";
-    if (launchOptionsLoading) return "Loading...";
-    if (!isManaged) return "Not set";
-    if (activeDll && activeDll !== dllName)
-      return `Active — ${activeDll} · switch to apply ${dllName}`;
-    return `Active — ${activeDll ?? dllName}`;
-  }, [selectedGame, launchOptionsLoading, isManaged, activeDll, dllName]);
+  // ── Status display ─────────────────────────────────────────────────────────
 
-  const statusColor = useMemo(() => {
-    if (!isManaged || launchOptionsLoading) return undefined;
-    if (activeDll && activeDll !== dllName) return "#ffd866"; // yellow — different DLL selected
-    return "#3fb950"; // green — active and matching
-  }, [isManaged, launchOptionsLoading, activeDll, dllName]);
+  const statusDisplay = useMemo(() => {
+    if (!selectedGame) return { text: "—", color: undefined as string | undefined };
+    if (statusLoading) return { text: "Loading...", color: undefined };
+    if (!gameStatus || gameStatus.status === "error")
+      return { text: gameStatus?.message || "—", color: undefined };
+    if (!gameStatus.install_found) return { text: "Install not found", color: "#ffd866" };
+    if (!gameStatus.patched) return { text: "Not patched", color: undefined };
+    const dllLabel = gameStatus.dll_name || "unknown";
+    if (isPatchedWithDifferentDll)
+      return { text: `Patched (${dllLabel}) — switch available`, color: "#ffd866" };
+    return { text: `Patched (${dllLabel})`, color: "#3fb950" };
+  }, [gameStatus, isPatchedWithDifferentDll, selectedGame, statusLoading]);
 
-  const setButtonLabel = useMemo(() => {
-    if (busy) return "Applying...";
-    if (!isManaged) return "Enable for this game";
-    if (activeDll && activeDll !== dllName) return `Switch to ${dllName}`;
-    return "Re-apply";
-  }, [busy, isManaged, activeDll, dllName]);
+  const focusableFieldProps = { focusable: true, highlightOnFocus: true } as const;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -214,14 +227,17 @@ export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
         <DropdownItem
           label="Steam game"
           menuLabel="Select a Steam game"
-          strDefaultLabel={
-            gamesLoading ? "Loading games..." : "Choose a game"
-          }
+          strDefaultLabel={gamesLoading ? "Loading games..." : "Choose a game"}
           disabled={gamesLoading || games.length === 0}
           selectedOption={selectedAppId}
-          rgOptions={games.map((g) => ({ data: g.appid, label: g.name }))}
+          rgOptions={games.map((g) => ({
+            data: g.appid,
+            label: g.install_found === false ? `${g.name} (not installed)` : g.name,
+          }))}
           onChange={(option) => {
-            setSelectedAppId(String(option.data));
+            const next = String(option.data);
+            lastSelectedAppId = next;
+            setSelectedAppId(next);
             setResultMessage("");
           }}
         />
@@ -230,42 +246,48 @@ export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
       {selectedGame && (
         <>
           <PanelSectionRow>
-            <Field focusable label="Launch options status">
-              {statusColor ? (
-                <span style={{ color: statusColor, fontWeight: 600 }}>
-                  {statusText}
+            <Field {...focusableFieldProps} label="Patch status">
+              {statusDisplay.color ? (
+                <span style={{ color: statusDisplay.color, fontWeight: 600 }}>
+                  {statusDisplay.text}
                 </span>
               ) : (
-                statusText
+                statusDisplay.text
               )}
             </Field>
           </PanelSectionRow>
 
           <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              disabled={busy || launchOptionsLoading}
-              onClick={handleSet}
-            >
-              {setButtonLabel}
+            <ButtonItem layout="below" disabled={!canPatch} onClick={handlePatch}>
+              {patchButtonLabel}
             </ButtonItem>
           </PanelSectionRow>
 
-          {isManaged && (
+          {canUnpatch && (
             <PanelSectionRow>
               <ButtonItem
                 layout="below"
-                disabled={busy}
-                onClick={handleRemove}
+                disabled={busyAction !== null}
+                onClick={handleUnpatch}
               >
-                {busy ? "Removing..." : "Remove from launch options"}
+                {busyAction === "unpatch" ? "Unpatching..." : "Unpatch this game"}
               </ButtonItem>
             </PanelSectionRow>
           )}
 
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              disabled={!selectedAppId || busyAction !== null || statusLoading}
+              onClick={() => void loadStatus(selectedAppId)}
+            >
+              {statusLoading ? "Refreshing..." : "Refresh status"}
+            </ButtonItem>
+          </PanelSectionRow>
+
           {resultMessage && (
             <PanelSectionRow>
-              <Field focusable label="Result">
+              <Field {...focusableFieldProps} label="Result">
                 {resultMessage}
               </Field>
             </PanelSectionRow>

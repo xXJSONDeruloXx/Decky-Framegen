@@ -8,17 +8,15 @@ interface ClipboardCommandsProps {
 export function ClipboardCommands({ pathExists, dllName }: ClipboardCommandsProps) {
   if (pathExists !== true) return null;
 
-  return (
-    <>
-      <SmartClipboardButton
-        command={`DLL=${dllName} ~/fgmod/fgmod %command%`}
-        buttonText="Copy Patch Command"
-      />
+  const launchCmd =
+    dllName === "OptiScaler.asi"
+      ? "SteamDeck=0 %command%"
+      : `WINEDLLOVERRIDES=${dllName.replace(".dll", "")}=n,b SteamDeck=0 %command%`;
 
-      <SmartClipboardButton
-        command="~/fgmod/fgmod-uninstaller.sh %command%"
-        buttonText="Copy Unpatch Command"
-      />
-    </>
+  return (
+    <SmartClipboardButton
+      command={launchCmd}
+      buttonText="Copy launch options"
+    />
   );
 }
