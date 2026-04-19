@@ -48,7 +48,6 @@ SUPPORT_FILES = [
     "amd_fidelityfx_framegeneration_dx12.dll",
     "amd_fidelityfx_upscaler_dx12.dll",
     "amd_fidelityfx_vk.dll",
-    "nvngx.dll",
     "dlssg_to_fsr3_amd_is_better.dll",
     "fakenvapi.dll",
     "fakenvapi.ini",
@@ -346,8 +345,12 @@ class Plugin:
             # Copy additional individual files from bin directory
             # Note: v0.9.0-final includes dlssg_to_fsr3_amd_is_better.dll, fakenvapi.dll, and fakenvapi.ini in the 7z
             # Only copy files that aren't already in the archive (separate remote binaries)
+            # nvngx.dll is intentionally excluded: it was a stale DLSS 3.10.3 stub from a
+            # pre-0.9 nightly that is missing DLSS 3.1+ exports (AllocateParameters,
+            # GetCapabilityParameters, Init_with_ProjectID, etc.) present in OptiScaler
+            # 0.9.0-final's own NGX proxy layer.  OptiScaler handles all NGX interception
+            # internally; the bare nvidia DLL caused export-not-found failures on Proton.
             additional_files = [
-                "nvngx.dll",  # nvidia dll from streamline sdk, not bundled in opti
                 "OptiPatcher_v0.30.asi"  # ASI plugin for OptiScaler spoofing
             ]
             
@@ -511,8 +514,7 @@ class Plugin:
             "OptiScaler.ini",
             "dlssg_to_fsr3_amd_is_better.dll", 
             "fakenvapi.dll",        # v0.9.0-final includes fakenvapi.dll in archive
-            "fakenvapi.ini", 
-            "nvngx.dll",
+            "fakenvapi.ini",
             "amd_fidelityfx_dx12.dll",
             "amd_fidelityfx_framegeneration_dx12.dll",
             "amd_fidelityfx_upscaler_dx12.dll",

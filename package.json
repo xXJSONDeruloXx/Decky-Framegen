@@ -1,6 +1,6 @@
 {
   "name": "decky-framegen",
-  "version": "0.15.1",
+  "version": "0.15.2",
   "description": "This plugin installs and manages OptiScaler, a tool that enhances upscaling and enables frame generation in a range of DirectX 12 games.",
   "type": "module",
   "scripts": {
@@ -53,8 +53,8 @@
   "remote_binary": 
   [
     {
-      "sha256hash":  "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5",
-      "url":  "https://github.com/optiscaler/OptiScaler/releases/download/v0.9/Optiscaler_0.9.0-final.20260401._AF.7z",
+      "sha256hash":  "a988ce2c0a86bba58a6313659d1ed2ab78f994dbdfab246394a2e4293ac68010",
+      "url":  "https://github.com/optiscaler/OptiScaler/releases/download/v0.9.0/Optiscaler_0.9.0-final.20260401._AF.7z",
       "name":  "Optiscaler_0.9.0-final.20260401._AF.7z"
     },
     {
@@ -66,11 +66,6 @@
       "sha256hash": "c4afb71d179894ac68874d48295e101fedb0dd8e10bcec29163760465706267c",
       "url": "https://github.com/optiscaler/OptiPatcher/releases/download/v0.30/OptiPatcher_v0.30.asi",
       "name": "OptiPatcher_v0.30.asi"
-    },
-    {
-      "sha256hash":  "1d75e7c1f37f966517f625aa3cc9602ff89d42ad2a7fcbdfa5fc91dab4674149",
-      "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/OptiScaler_v0.7.8-pre0_20250816_unsigned_dll-13b2b5d0/nvngx.dll",
-      "name":  "nvngx.dll"
     }
   ]
 }
