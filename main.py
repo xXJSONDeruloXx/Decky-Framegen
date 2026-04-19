@@ -4,6 +4,7 @@ import subprocess
 import json
 import shutil
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Toggle to enable overwriting the upscaler DLL from the static remote binary.
@@ -51,6 +52,25 @@ SUPPORT_FILES = [
     "dlssg_to_fsr3_amd_is_better.dll",
     "fakenvapi.dll",
     "fakenvapi.ini",
+]
+
+MARKER_FILENAME = "FRAMEGEN_PATCH"
+
+BAD_EXE_SUBSTRINGS = [
+    "crashreport",
+    "crashreportclient",
+    "eac",
+    "easyanticheat",
+    "beclient",
+    "eosbootstrap",
+    "benchmark",
+    "uninstall",
+    "setup",
+    "launcher",
+    "updater",
+    "bootstrap",
+    "_redist",
+    "prereq",
 ]
 
 LEGACY_FILES = [
@@ -716,51 +736,258 @@ class Plugin:
                 "message": f"Manual unpatch failed: {exc}",
             }
 
+    # ── Steam library discovery ───────────────────────────────────────────────
+
+    def _home_path(self) -> Path:
+        try:
+            return Path(decky.HOME)
+        except TypeError:
+            return Path(str(decky.HOME))
+
+    def _steam_root_candidates(self) -> list[Path]:
+        home = self._home_path()
+        candidates = [
+            home / ".local" / "share" / "Steam",
+            home / ".steam" / "steam",
+            home / ".steam" / "root",
+            home / ".var" / "app" / "com.valvesoftware.Steam" / "home" / ".local" / "share" / "Steam",
+            home / ".var" / "app" / "com.valvesoftware.Steam" / "home" / ".steam" / "steam",
+        ]
+        unique: list[Path] = []
+        seen: set[str] = set()
+        for c in candidates:
+            key = str(c)
+            if key not in seen:
+                unique.append(c)
+                seen.add(key)
+        return unique
+
+    def _steam_library_paths(self) -> list[Path]:
+        library_paths: list[Path] = []
+        seen: set[str] = set()
+        for steam_root in self._steam_root_candidates():
+            if steam_root.exists():
+                key = str(steam_root)
+                if key not in seen:
+                    library_paths.append(steam_root)
+                    seen.add(key)
+            library_file = steam_root / "steamapps" / "libraryfolders.vdf"
+            if not library_file.exists():
+                continue
+            try:
+                with open(library_file, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        if '"path"' not in line:
+                            continue
+                        path = line.split('"path"', 1)[1].strip().strip('"').replace("\\\\", "/")
+                        candidate = Path(path)
+                        key = str(candidate)
+                        if key not in seen:
+                            library_paths.append(candidate)
+                            seen.add(key)
+            except Exception as exc:
+                decky.logger.error(f"[Framegen] failed to parse libraryfolders: {library_file}: {exc}")
+        return library_paths
+
+    def _find_installed_games(self, appid: str | None = None) -> list[dict]:
+        games: list[dict] = []
+        for library_path in self._steam_library_paths():
+            steamapps_path = library_path / "steamapps"
+            if not steamapps_path.exists():
+                continue
+            for appmanifest in steamapps_path.glob("appmanifest_*.acf"):
+                game_info: dict = {"appid": "", "name": "", "library_path": str(library_path), "install_path": ""}
+                install_dir = ""
+                try:
+                    with open(appmanifest, "r", encoding="utf-8", errors="replace") as f:
+                        for line in f:
+                            if '"appid"' in line:
+                                game_info["appid"] = line.split('"appid"', 1)[1].strip().strip('"')
+                            elif '"name"' in line:
+                                game_info["name"] = line.split('"name"', 1)[1].strip().strip('"')
+                            elif '"installdir"' in line:
+                                install_dir = line.split('"installdir"', 1)[1].strip().strip('"')
+                except Exception as exc:
+                    decky.logger.error(f"[Framegen] skipping manifest {appmanifest}: {exc}")
+                    continue
+                if not game_info["appid"] or not game_info["name"]:
+                    continue
+                if "Proton" in game_info["name"] or "Steam Linux Runtime" in game_info["name"]:
+                    continue
+                install_path = steamapps_path / "common" / install_dir if install_dir else Path()
+                game_info["install_path"] = str(install_path)
+                if appid is None or str(game_info["appid"]) == str(appid):
+                    games.append(game_info)
+        deduped: dict[str, dict] = {}
+        for game in games:
+            deduped[str(game["appid"])] = game
+        return sorted(deduped.values(), key=lambda g: g["name"].lower())
+
+    def _game_record(self, appid: str) -> dict | None:
+        matches = self._find_installed_games(appid)
+        return matches[0] if matches else None
+
+    # ── Patch target auto-detection ───────────────────────────────────────────
+
+    def _normalized_path_string(self, value: str) -> str:
+        normalized = value.lower().replace("\\", "/")
+        normalized = normalized.replace("z:/", "/")
+        normalized = normalized.replace("//", "/")
+        return normalized
+
+    def _candidate_executables(self, install_root: Path) -> list[Path]:
+        if not install_root.exists():
+            return []
+        candidates: list[Path] = []
+        try:
+            for exe in install_root.rglob("*.exe"):
+                if exe.is_file():
+                    candidates.append(exe)
+        except Exception as exc:
+            decky.logger.error(f"[Framegen] exe scan failed for {install_root}: {exc}")
+        return candidates
+
+    def _exe_score(self, exe: Path, install_root: Path, game_name: str) -> int:
+        normalized = self._normalized_path_string(str(exe))
+        name = exe.name.lower()
+        score = 0
+        if normalized.endswith("-win64-shipping.exe"):
+            score += 300
+        if "shipping.exe" in name:
+            score += 220
+        if "/binaries/win64/" in normalized:
+            score += 200
+        if "/win64/" in normalized:
+            score += 80
+        if exe.parent == install_root:
+            score += 20
+        sanitized_game = re.sub(r"[^a-z0-9]", "", game_name.lower())
+        sanitized_name = re.sub(r"[^a-z0-9]", "", exe.stem.lower())
+        sanitized_root = re.sub(r"[^a-z0-9]", "", install_root.name.lower())
+        if sanitized_game and sanitized_game in sanitized_name:
+            score += 120
+        if sanitized_root and sanitized_root in sanitized_name:
+            score += 90
+        for bad in BAD_EXE_SUBSTRINGS:
+            if bad in normalized:
+                score -= 200
+        score -= len(exe.parts)
+        return score
+
+    def _best_running_executable(self, candidates: list[Path]) -> Path | None:
+        if not candidates:
+            return None
+        try:
+            result = subprocess.run(["ps", "-eo", "args="], capture_output=True, text=True, check=False)
+            process_lines = result.stdout.splitlines()
+        except Exception as exc:
+            decky.logger.error(f"[Framegen] running exe scan failed: {exc}")
+            return None
+        normalized_candidates = [(exe, self._normalized_path_string(str(exe))) for exe in candidates]
+        matches: list[tuple[int, Path]] = []
+        for line in process_lines:
+            normalized_line = self._normalized_path_string(line)
+            for exe, normalized_exe in normalized_candidates:
+                if normalized_exe in normalized_line:
+                    matches.append((len(normalized_exe), exe))
+        if not matches:
+            return None
+        matches.sort(key=lambda item: item[0], reverse=True)
+        return matches[0][1]
+
+    def _guess_patch_target(self, game_info: dict) -> tuple[Path, Path | None]:
+        install_root = Path(game_info["install_path"])
+        candidates = self._candidate_executables(install_root)
+        if not candidates:
+            return install_root, None
+        running_exe = self._best_running_executable(candidates)
+        if running_exe:
+            return running_exe.parent, running_exe
+        best = max(candidates, key=lambda exe: self._exe_score(exe, install_root, game_info["name"]))
+        return best.parent, best
+
+    def _is_game_running(self, game_info: dict) -> bool:
+        install_root = Path(game_info["install_path"])
+        candidates = self._candidate_executables(install_root)
+        return self._best_running_executable(candidates) is not None
+
+    # ── Marker file tracking ──────────────────────────────────────────────────
+
+    def _find_marker(self, install_root: Path) -> Path | None:
+        if not install_root.exists():
+            return None
+        try:
+            for marker in install_root.rglob(MARKER_FILENAME):
+                if marker.is_file():
+                    return marker
+        except Exception:
+            pass
+        return None
+
+    def _read_marker(self, marker_path: Path) -> dict:
+        try:
+            with open(marker_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _write_marker(
+        self,
+        marker_path: Path,
+        *,
+        appid: str,
+        game_name: str,
+        dll_name: str,
+        target_dir: Path,
+        original_launch_options: str,
+        backed_up_files: list[str],
+    ) -> None:
+        payload = {
+            "appid": str(appid),
+            "game_name": game_name,
+            "dll_name": dll_name,
+            "target_dir": str(target_dir),
+            "original_launch_options": original_launch_options,
+            "backed_up_files": backed_up_files,
+            "patched_at": datetime.now(timezone.utc).isoformat(),
+        }
+        with open(marker_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+
+    # ── Launch options helpers ────────────────────────────────────────────────
+
+    def _build_managed_launch_options(self, dll_name: str) -> str:
+        if dll_name == "OptiScaler.asi":
+            return "SteamDeck=0 %command%"
+        base = dll_name.replace(".dll", "")
+        return f"WINEDLLOVERRIDES={base}=n,b SteamDeck=0 %command%"
+
+    def _is_managed_launch_options(self, opts: str) -> bool:
+        if not opts or not opts.strip():
+            return False
+        normalized = " ".join(opts.strip().split())
+        for dll_name in VALID_DLL_NAMES:
+            if dll_name == "OptiScaler.asi":
+                continue
+            base = dll_name.replace(".dll", "")
+            if f"WINEDLLOVERRIDES={base}=n,b" in normalized:
+                return True
+        if "fgmod/fgmod" in normalized:
+            return True
+        return False
+
     async def list_installed_games(self) -> dict:
         try:
-            steam_root = Path(decky.HOME) / ".steam" / "steam"
-            library_file = Path(steam_root) / "steamapps" / "libraryfolders.vdf"
-            
-
-            if not library_file.exists():
-                return {"status": "error", "message": "libraryfolders.vdf not found"}
-
-            library_paths = []
-            with open(library_file, "r", encoding="utf-8", errors="replace") as file:
-                for line in file:
-                    if '"path"' in line:
-                        path = line.split('"path"')[1].strip().strip('"').replace("\\\\", "/")
-                        library_paths.append(path)
-
             games = []
-            for library_path in library_paths:
-                steamapps_path = Path(library_path) / "steamapps"
-                if not steamapps_path.exists():
-                    continue
-
-                for appmanifest in steamapps_path.glob("appmanifest_*.acf"):
-                    game_info = {"appid": "", "name": ""}
-
-                    try:
-                        with open(appmanifest, "r", encoding="utf-8") as file:
-                            for line in file:
-                                if '"appid"' in line:
-                                    game_info["appid"] = line.split('"appid"')[1].strip().strip('"')
-                                if '"name"' in line:
-                                    game_info["name"] = line.split('"name"')[1].strip().strip('"')
-                    except UnicodeDecodeError as e:
-                        decky.logger.error(f"Skipping {appmanifest} due to encoding issue: {e}")
-                    finally:
-                        pass  # Ensures loop continues even if an error occurs
-
-                    if game_info["appid"] and game_info["name"]:
-                        games.append(game_info)
-
-            # Filter out games whose name contains "Proton" or "Steam Linux Runtime"
-            filtered_games = [g for g in games if "Proton" not in g["name"] and "Steam Linux Runtime" not in g["name"]]
-
-            return {"status": "success", "games": filtered_games}
-
+            for game in self._find_installed_games():
+                install_root = Path(game["install_path"])
+                games.append({
+                    "appid": str(game["appid"]),
+                    "name": game["name"],
+                    "install_found": install_root.exists(),
+                })
+            return {"status": "success", "games": games}
         except Exception as e:
             decky.logger.error(str(e))
             return {"status": "error", "message": str(e)}
@@ -800,3 +1027,177 @@ class Plugin:
             return {"status": "error", "message": str(exc)}
 
         return self._manual_unpatch_directory_impl(target_dir)
+
+    # ── AppID-based patch / unpatch / status ───────────────────────────────────────
+
+    async def get_game_status(self, appid: str) -> dict:
+        try:
+            game_info = self._game_record(str(appid))
+            if not game_info:
+                return {
+                    "status": "success",
+                    "appid": str(appid),
+                    "install_found": False,
+                    "patched": False,
+                    "dll_name": None,
+                    "target_dir": None,
+                    "message": "Game not found in Steam library.",
+                }
+            install_root = Path(game_info["install_path"])
+            if not install_root.exists():
+                return {
+                    "status": "success",
+                    "appid": str(appid),
+                    "name": game_info["name"],
+                    "install_found": False,
+                    "patched": False,
+                    "dll_name": None,
+                    "target_dir": None,
+                    "message": "Game install directory not found.",
+                }
+            marker = self._find_marker(install_root)
+            if not marker:
+                return {
+                    "status": "success",
+                    "appid": str(appid),
+                    "name": game_info["name"],
+                    "install_found": True,
+                    "patched": False,
+                    "dll_name": None,
+                    "target_dir": None,
+                    "message": "Not patched.",
+                }
+            metadata = self._read_marker(marker)
+            dll_name = metadata.get("dll_name", "dxgi.dll")
+            target_dir = Path(metadata.get("target_dir", str(marker.parent)))
+            dll_present = (target_dir / dll_name).exists()
+            return {
+                "status": "success",
+                "appid": str(appid),
+                "name": game_info["name"],
+                "install_found": True,
+                "patched": dll_present,
+                "dll_name": dll_name,
+                "target_dir": str(target_dir),
+                "patched_at": metadata.get("patched_at"),
+                "message": (
+                    f"Patched using {dll_name}."
+                    if dll_present
+                    else f"Marker found but {dll_name} is missing. Reinstall recommended."
+                ),
+            }
+        except Exception as exc:
+            decky.logger.error(f"[Framegen] get_game_status failed for {appid}: {exc}")
+            return {"status": "error", "message": str(exc)}
+
+    async def patch_game(self, appid: str, dll_name: str = "dxgi.dll", current_launch_options: str = "") -> dict:
+        try:
+            if dll_name not in VALID_DLL_NAMES:
+                return {"status": "error", "message": f"Invalid proxy DLL name: {dll_name}"}
+            game_info = self._game_record(str(appid))
+            if not game_info:
+                return {"status": "error", "message": "Game not found in Steam library."}
+            install_root = Path(game_info["install_path"])
+            if not install_root.exists():
+                return {"status": "error", "message": "Game install directory does not exist."}
+            if self._is_game_running(game_info):
+                return {"status": "error", "message": "Close the game before patching."}
+            fgmod_path = Path(decky.HOME) / "fgmod"
+            if not fgmod_path.exists():
+                return {"status": "error", "message": "OptiScaler bundle not installed. Run Install first."}
+
+            # Preserve true original launch options across re-patches
+            original_launch_options = current_launch_options or ""
+            existing_marker = self._find_marker(install_root)
+            if existing_marker:
+                metadata = self._read_marker(existing_marker)
+                stored_opts = str(metadata.get("original_launch_options") or "")
+                if stored_opts and not self._is_managed_launch_options(stored_opts):
+                    original_launch_options = stored_opts
+                try:
+                    existing_marker.unlink()
+                except Exception:
+                    pass
+            if self._is_managed_launch_options(original_launch_options):
+                original_launch_options = ""
+
+            # Auto-detect the right directory to patch
+            target_dir, target_exe = self._guess_patch_target(game_info)
+            decky.logger.info(f"[Framegen] patch_game: appid={appid} dll={dll_name} target={target_dir} exe={target_exe}")
+
+            result = self._manual_patch_directory_impl(target_dir, dll_name)
+            if result["status"] != "success":
+                return result
+
+            backed_up = [dll for dll in ORIGINAL_DLL_BACKUPS if (target_dir / f"{dll}.b").exists()]
+            marker_path = target_dir / MARKER_FILENAME
+            self._write_marker(
+                marker_path,
+                appid=str(appid),
+                game_name=game_info["name"],
+                dll_name=dll_name,
+                target_dir=target_dir,
+                original_launch_options=original_launch_options,
+                backed_up_files=backed_up,
+            )
+
+            managed_launch_options = self._build_managed_launch_options(dll_name)
+            decky.logger.info(f"[Framegen] patch_game success: appid={appid} launch_options={managed_launch_options}")
+            return {
+                "status": "success",
+                "appid": str(appid),
+                "name": game_info["name"],
+                "dll_name": dll_name,
+                "target_dir": str(target_dir),
+                "launch_options": managed_launch_options,
+                "original_launch_options": original_launch_options,
+                "message": f"Patched {game_info['name']} using {dll_name}.",
+            }
+        except Exception as exc:
+            decky.logger.error(f"[Framegen] patch_game failed for {appid}: {exc}")
+            return {"status": "error", "message": str(exc)}
+
+    async def unpatch_game(self, appid: str) -> dict:
+        try:
+            game_info = self._game_record(str(appid))
+            if not game_info:
+                return {"status": "error", "message": "Game not found in Steam library."}
+            install_root = Path(game_info["install_path"])
+            if not install_root.exists():
+                return {
+                    "status": "success",
+                    "appid": str(appid),
+                    "name": game_info["name"],
+                    "launch_options": "",
+                    "message": "Game install directory does not exist.",
+                }
+            if self._is_game_running(game_info):
+                return {"status": "error", "message": "Close the game before unpatching."}
+            marker = self._find_marker(install_root)
+            if not marker:
+                return {
+                    "status": "success",
+                    "appid": str(appid),
+                    "name": game_info["name"],
+                    "launch_options": "",
+                    "message": "No Framegen patch found for this game.",
+                }
+            metadata = self._read_marker(marker)
+            target_dir = Path(metadata.get("target_dir", str(marker.parent)))
+            original_launch_options = str(metadata.get("original_launch_options") or "")
+            self._manual_unpatch_directory_impl(target_dir)
+            try:
+                marker.unlink()
+            except FileNotFoundError:
+                pass
+            decky.logger.info(f"[Framegen] unpatch_game success: appid={appid} target={target_dir}")
+            return {
+                "status": "success",
+                "appid": str(appid),
+                "name": game_info["name"],
+                "launch_options": original_launch_options,
+                "message": f"Unpatched {game_info['name']}.",
+            }
+        except Exception as exc:
+            decky.logger.error(f"[Framegen] unpatch_game failed for {appid}: {exc}")
+            return {"status": "error", "message": str(exc)}
