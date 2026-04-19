@@ -351,7 +351,7 @@ class Plugin:
             # 0.9.0-final's own NGX proxy layer.  OptiScaler handles all NGX interception
             # internally; the bare nvidia DLL caused export-not-found failures on Proton.
             additional_files = [
-                "OptiPatcher_v0.30.asi"  # ASI plugin for OptiScaler spoofing
+                "OptiPatcher_rolling.asi"  # ASI plugin for OptiScaler spoofing
             ]
             
             decky.logger.info("Starting additional files copy")
@@ -389,7 +389,7 @@ class Plugin:
                 decky.logger.info(f"Created plugins directory: {plugins_dir}")
                 
                 # Copy OptiPatcher ASI file to plugins directory
-                asi_src = bin_path / "OptiPatcher_v0.30.asi"
+                asi_src = bin_path / "OptiPatcher_rolling.asi"
                 asi_dst = plugins_dir / "OptiPatcher.asi"  # Rename to generic name
                 
                 if asi_src.exists():
