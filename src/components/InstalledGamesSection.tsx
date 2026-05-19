@@ -48,7 +48,7 @@ export function InstalledGamesSection() {
         strCancelButtonText="Cancel"
         onOK={async () => {
           try {
-            await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod %COMMAND%');
+            await SteamClient.Apps.SetAppLaunchOptions(Number(selectedGame.appid), '~/fgmod/fgmod %COMMAND%');
             setResult(`Frame generation enabled for ${selectedGame.name}. Launch the game, enable DLSS in graphics settings, then press Insert to access OptiScaler options.`);
           } catch (error) {
             logError('handlePatchClick: ' + String(error));
@@ -63,7 +63,7 @@ export function InstalledGamesSection() {
     if (!selectedGame) return;
 
     try {
-      await SteamClient.Apps.SetAppLaunchOptions(selectedGame.appid, '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
+      await SteamClient.Apps.SetAppLaunchOptions(Number(selectedGame.appid), '~/fgmod/fgmod-uninstaller.sh %COMMAND%');
       setResult(`Frame generation will be disabled on next launch of ${selectedGame.name}.`);
     } catch (error) {
       logError('handleUnpatchClick: ' + String(error));

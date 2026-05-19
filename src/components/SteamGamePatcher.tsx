@@ -50,6 +50,10 @@ type GameStatus = {
   dll_name?: string | null;
   target_dir?: string | null;
   patched_at?: string | null;
+  optiscaler_version?: string | null;
+  fsr4_variant?: string | null;
+  fsr4_variant_label?: string | null;
+  fsr4_upscaler_sha256?: string | null;
 };
 
 // ─── Module-level state persistence ──────────────────────────────────────────
@@ -60,9 +64,10 @@ let lastSelectedAppId = "";
 
 interface SteamGamePatcherProps {
   dllName: string;
+  fsr4Variant: string;
 }
 
-export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
+export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps) {
   const [games, setGames] = useState<GameEntry[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
   const [selectedAppId, setSelectedAppId] = useState<string>(() => lastSelectedAppId);
@@ -165,7 +170,7 @@ export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
       } catch {
         // non-fatal: proceed without current launch options
       }
-      const result = await patchGame(selectedAppId, dllName, currentLaunchOptions);
+      const result = await patchGame(selectedAppId, dllName, currentLaunchOptions, fsr4Variant);
       if (result.status !== "success") throw new Error(result.message || "Patch failed.");
       setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
       const msg = result.message || `Patched ${selectedGame.name}.`;
@@ -179,7 +184,7 @@ export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
     } finally {
       setBusyAction(null);
     }
-  }, [busyAction, dllName, loadStatus, selectedAppId, selectedGame]);
+  }, [busyAction, dllName, fsr4Variant, loadStatus, selectedAppId, selectedGame]);
 
   const handleUnpatch = useCallback(async () => {
     if (!selectedGame || !selectedAppId || busyAction) return;
@@ -254,6 +259,16 @@ export function SteamGamePatcher({ dllName }: SteamGamePatcherProps) {
               ) : (
                 statusDisplay.text
               )}
+            </Field>
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <Field {...focusableFieldProps} label="FSR4 runtime">
+              {gameStatus?.patched
+                ? (gameStatus?.fsr4_variant_label || "Unknown")
+                : (fsr4Variant === "rdna4-native"
+                    ? "Will patch with Native bundle / RDNA4"
+                    : "Will patch with Steam Deck / RDNA2-3 optimized")}
             </Field>
           </PanelSectionRow>
 

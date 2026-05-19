@@ -59,6 +59,22 @@ export const PROXY_DLL_OPTIONS = [
 export type ProxyDllValue = typeof PROXY_DLL_OPTIONS[number]["value"];
 export const DEFAULT_PROXY_DLL: ProxyDllValue = "dxgi.dll";
 
+export const FSR4_VARIANT_OPTIONS = [
+  {
+    value: "rdna23-int8",
+    label: "Steam Deck / RDNA2-3 optimized",
+    hint: "Uses the bundled FSR4 INT8 4.0.2c override. Recommended for Steam Deck and other non-RDNA4 systems.",
+  },
+  {
+    value: "rdna4-native",
+    label: "Native bundle / RDNA4",
+    hint: "Uses the amd_fidelityfx_upscaler_dx12.dll that ships inside the OptiScaler 0.9.2a bundle.",
+  },
+] as const;
+
+export type Fsr4VariantValue = typeof FSR4_VARIANT_OPTIONS[number]["value"];
+export const DEFAULT_FSR4_VARIANT: Fsr4VariantValue = "rdna23-int8";
+
 // Common timeout values
 export const TIMEOUTS = {
   resultDisplay: 5000,  // 5 seconds
@@ -76,5 +92,5 @@ export const MESSAGES = {
   installSuccess: "OptiScaler mod setup successfully!",
   uninstallSuccess: "OptiScaler mod removed successfully.",
   instructionTitle: "How to Use:",
-  instructionText: "Click 'Copy Patch Command' or 'Copy Unpatch Command', then go to your game's properties, and paste the command into the Launch Options field.\n\nIn-game: Enable DLSS in graphics settings to unlock FSR 3.1/XeSS 2.0 in DirectX12 Games.\n\nFor extended OptiScaler options, assign a back button to a keyboard's 'Insert' key."
+  instructionText: "Use 'Copy launch options' for the standard direct launch-options method. If you want the wrapper commands instead, enable Manual Mode to reveal 'Copy Patch Command' and 'Copy Unpatch Command'.\n\nIn-game: Enable DLSS in graphics settings to unlock FSR 3.1/XeSS 2.0 in DirectX12 Games.\n\nFor extended OptiScaler options, assign a back button to a keyboard's 'Insert' key."
 };

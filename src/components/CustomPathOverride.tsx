@@ -37,6 +37,7 @@ interface ManualPatchControlsProps {
   isAvailable: boolean;
   onManualModeChange?: (enabled: boolean) => void;
   dllName: string;
+  fsr4Variant: string;
 }
 
 interface PickerState {
@@ -57,7 +58,7 @@ const formatResultMessage = (result: ApiResponse | null) => {
   return result.message || result.output || "Operation failed.";
 };
 
-export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName }: ManualPatchControlsProps) => {
+export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, fsr4Variant }: ManualPatchControlsProps) => {
   const [isEnabled, setEnabled] = useState(false);
   const [defaults, setDefaults] = useState<PathDefaults>(INITIAL_DEFAULTS);
   const [pickerState, setPickerState] = useState<PickerState>(INITIAL_PICKER_STATE);
@@ -166,7 +167,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName }
       try {
         const response =
           action === "patch"
-            ? await runManualPatch(selectedPath, dllName)
+            ? await runManualPatch(selectedPath, dllName, fsr4Variant)
             : await runManualUnpatch(selectedPath);
         setOperationResult(response ?? { status: "error", message: "No response from backend." });
       } catch (err) {
@@ -178,7 +179,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName }
         setBusy(false);
       }
     },
-    [selectedPath, dllName]
+    [selectedPath, dllName, fsr4Variant]
   );
 
   const handleToggle = (value: boolean) => {

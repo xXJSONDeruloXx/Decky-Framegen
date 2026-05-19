@@ -3,9 +3,16 @@ import { SmartClipboardButton } from "./SmartClipboardButton";
 interface ClipboardCommandsProps {
   pathExists: boolean | null;
   dllName: string;
+  manualModeEnabled?: boolean;
+  showLaunchOptions?: boolean;
 }
 
-export function ClipboardCommands({ pathExists, dllName }: ClipboardCommandsProps) {
+export function ClipboardCommands({
+  pathExists,
+  dllName,
+  manualModeEnabled = false,
+  showLaunchOptions = true,
+}: ClipboardCommandsProps) {
   if (pathExists !== true) return null;
 
   const launchCmd =
@@ -14,9 +21,25 @@ export function ClipboardCommands({ pathExists, dllName }: ClipboardCommandsProp
       : `WINEDLLOVERRIDES=${dllName.replace(".dll", "")}=n,b SteamDeck=0 %command%`;
 
   return (
-    <SmartClipboardButton
-      command={launchCmd}
-      buttonText="Copy launch options"
-    />
+    <>
+      {showLaunchOptions ? (
+        <SmartClipboardButton
+          command={launchCmd}
+          buttonText="Copy launch options"
+        />
+      ) : null}
+      {manualModeEnabled ? (
+        <>
+          <SmartClipboardButton
+            command="~/fgmod/fgmod %command%"
+            buttonText="Copy Patch Command"
+          />
+          <SmartClipboardButton
+            command="~/fgmod/fgmod-uninstaller.sh %command%"
+            buttonText="Copy Unpatch Command"
+          />
+        </>
+      ) : null}
+    </>
   );
 }

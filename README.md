@@ -25,15 +25,17 @@ This plugin uses OptiScaler to replace DLSS calls with FSR3/FSR3.1, giving you:
 1. **Install the Plugin**: Download and install through Decky Loader "install from zip" option in developer settings
 2. **Setup OptiScaler**: Open the plugin and click "Setup OptiScaler Mod" 
 3. **Configure Games**: For each game you want to enhance:
-   - Click "Copy Patch Command" in the plugin
+   - Click "Copy launch options" in the plugin for the standard direct launch-options method
    - Go to your game's Properties → Launch Options in Steam
-   - Paste the command: `~/fgmod/fgmod %command%`
+   - Paste the copied command
+   - If you want the wrapper commands instead, enable Manual Mode and use "Copy Patch Command" / "Copy Unpatch Command"
 4. **Enable Features**: Launch your game and enable DLSS in the graphics settings
 5. **Advanced Options**: Press the Insert key in-game for additional OptiScaler settings
 
 ### Removing the Mod from Games
-- Click "Copy Unpatch Command" and replace the launch options with: `~/fgmod/fgmod-uninstaller.sh %command%`
-- Run the game at least once to make the uninstaller script run. After you can leave the launch option or remove it
+- If you used the wrapper method, enable Manual Mode and click "Copy Unpatch Command", then replace the launch options with: `~/fgmod/fgmod-uninstaller.sh %command%`
+- If you used the standard direct patch flow, use the in-plugin unpatch button instead
+- Run the game at least once to make the uninstaller script run. After that you can leave the launch option or remove it
 
 ### Configuring OptiScaler via Environment Variables
 As of v0.15.1, you can update OptiScaler settings before a game launches by adding environment variables. 
@@ -78,7 +80,7 @@ Dx12Upscaler=fsr31 ~/fgmod/fgmod %command%
 ## Technical Details
 
 ### What's Included
-- **[OptiScaler 0.9.0-pre11](https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/tag/opti-9-pre-11)**: Bleeding-edge OptiScaler bundle used by this plugin, paired with the RDNA2-optimized `amd_fidelityfx_upscaler_dx12.dll` override for Steam Deck compatibility
+- **[OptiScaler 0.9.2a](https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/tag/opti-9-2-a)**: Bleeding-edge OptiScaler bundle used by this plugin, with bundled FSR4 runtime variants for either the archive-native RDNA4 path or the Steam Deck / RDNA2-3 optimized INT8 override
 - **Nukem9's DLSSG to FSR3 mod**: Allows use of DLSS inputs for FSR frame gen outputs, and xess or FSR upscaling outputs
 - **FakeNVAPI**: NVIDIA API emulation for AMD/Intel GPUs, to make DLSS options selectable in game
 - **Supporting Libraries**: All required DX12/Vulkan libraries (libxess.dll, amd_fidelityfx, etc.)
