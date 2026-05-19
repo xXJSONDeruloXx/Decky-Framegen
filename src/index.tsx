@@ -7,8 +7,17 @@ import { checkFGModPath } from "./api";
 import { safeAsyncOperation } from "./utils";
 import { TIMEOUTS } from "./utils/constants";
 
+type FgmodInfo = {
+  exists: boolean;
+  version?: string | null;
+  selected_fsr4_variant?: string | null;
+  selected_fsr4_variant_label?: string | null;
+  install_manifest_present?: boolean;
+};
+
 function MainContent() {
   const [pathExists, setPathExists] = useState<boolean | null>(null);
+  const [fgmodInfo, setFgmodInfo] = useState<FgmodInfo | null>(null);
 
   useEffect(() => {
     const checkPath = async () => {
@@ -16,7 +25,10 @@ function MainContent() {
         async () => await checkFGModPath(),
         'MainContent -> checkPath'
       );
-      if (result) setPathExists(result.exists);
+      if (result) {
+        setFgmodInfo(result);
+        setPathExists(result.exists);
+      }
     };
     
     checkPath(); // Initial check
@@ -29,6 +41,7 @@ function MainContent() {
       <OptiScalerControls
         pathExists={pathExists}
         setPathExists={setPathExists}
+        fgmodInfo={fgmodInfo}
       />
       {pathExists === true ? (
         <>

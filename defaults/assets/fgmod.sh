@@ -18,6 +18,8 @@ error_exit() {
 fgmod_path="$HOME/fgmod"
 dll_name="${DLL:-dxgi.dll}"
 preserve_ini="${PRESERVE_INI:-true}"
+fsr4_variant="${FGMOD_FSR4_VARIANT:-}"
+python_bin="$(command -v python3 || command -v python || true)"
 
 # === Resolve Game Path ===
 if [[ "$#" -lt 1 ]]; then
@@ -135,6 +137,67 @@ has_patch_fingerprint() {
   return 1
 }
 
+resolve_fsr4_variant() {
+  if [[ -n "$fsr4_variant" ]]; then
+    echo "$fsr4_variant"
+    return
+  fi
+
+  local manifest_path="$fgmod_path/install-manifest.json"
+  if [[ -f "$manifest_path" && -n "$python_bin" ]]; then
+    local manifest_variant
+    manifest_variant=$("$python_bin" - <<PY 2>/dev/null
+import json
+from pathlib import Path
+path = Path(r'''$manifest_path''')
+try:
+    data = json.loads(path.read_text(encoding='utf-8'))
+    value = str(data.get('selected_default_variant') or '').strip()
+    print(value)
+except Exception:
+    pass
+PY
+)
+    if [[ -n "$manifest_variant" ]]; then
+      echo "$manifest_variant"
+      return
+    fi
+  fi
+
+  echo "rdna23-int8"
+}
+
+selected_fsr4_variant="$(resolve_fsr4_variant)"
+case "$selected_fsr4_variant" in
+  rdna4-native)
+    fsr4_upscaler_src="$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll"
+    ;;
+  *)
+    selected_fsr4_variant="rdna23-int8"
+    fsr4_upscaler_src="$fgmod_path/fsr4-rdna2-3/amd_fidelityfx_upscaler_dx12.dll"
+    ;;
+esac
+[[ -f "$fsr4_upscaler_src" ]] || fsr4_upscaler_src="$fgmod_path/amd_fidelityfx_upscaler_dx12.dll"
+logger -t fgmod "Using FSR4 variant: $selected_fsr4_variant (source: $fsr4_upscaler_src)"
+
+is_managed_support_file() {
+  local existing_file="$1"
+  local filename
+  filename="$(basename "$existing_file")"
+  local candidate
+  if [[ "$filename" == "amd_fidelityfx_upscaler_dx12.dll" ]]; then
+    for candidate in \
+      "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" \
+      "$fgmod_path/fsr4-rdna2-3/amd_fidelityfx_upscaler_dx12.dll" \
+      "$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll"; do
+      [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
+    done
+    return 1
+  fi
+  candidate="$fgmod_path/$filename"
+  [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate"
+}
+
 # === Backup Pre-existing Proxy DLLs Before Cleanup ===
 for dll in "${proxy_backup_files[@]}"; do
   existing_path="$exe_folder_path/$dll"
@@ -160,8 +223,19 @@ unset cleanup_file
 # === Optional: Backup Original DLLs ===
 original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll")
 for dll in "${original_dlls[@]}"; do
-  [[ -f "$exe_folder_path/$dll" && ! -f "$exe_folder_path/$dll.b" ]] && mv -f "$exe_folder_path/$dll" "$exe_folder_path/$dll.b"
+  existing_path="$exe_folder_path/$dll"
+  backup_path="$exe_folder_path/$dll.b"
+  if [[ -f "$existing_path" && ! -f "$backup_path" ]]; then
+    if has_patch_fingerprint && is_managed_support_file "$existing_path"; then
+      rm -f "$existing_path"
+      logger -t fgmod "Removed managed support file before repatch: $dll"
+    else
+      mv -f "$existing_path" "$backup_path"
+      logger -t fgmod "Backed up original game DLL: $dll"
+    fi
+  fi
 done
+unset existing_path backup_path
 
 # === Remove nvapi64.dll and its backup (conflicts from previous fakenvapi versions) ===
 rm -f "$exe_folder_path/nvapi64.dll" "$exe_folder_path/nvapi64.dll.b"
@@ -239,7 +313,7 @@ cp -f "$fgmod_path/libxess_fg.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/libxell.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_dx12.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_framegeneration_dx12.dll" "$exe_folder_path/" || true
-cp -f "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" "$exe_folder_path/" || true
+cp -f "$fsr4_upscaler_src" "$exe_folder_path/amd_fidelityfx_upscaler_dx12.dll" || true
 cp -f "$fgmod_path/amd_fidelityfx_vk.dll" "$exe_folder_path/" || true
 
 # === Nukem FG Mod Files (now in fgmod directory) ===
