@@ -4,6 +4,7 @@ import subprocess
 import json
 import shutil
 import re
+import filecmp
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from pathlib import Path
 # Set to False or comment out this constant to skip the overwrite by default.
 UPSCALER_OVERWRITE_ENABLED = True
 
-VALID_DLL_NAMES = {
+PROXY_DLL_BACKUPS = [
     "dxgi.dll",
     "winmm.dll",
     "dbghelp.dll",
@@ -19,16 +20,38 @@ VALID_DLL_NAMES = {
     "wininet.dll",
     "winhttp.dll",
     "OptiScaler.asi",
-}
+]
+
+VALID_DLL_NAMES = set(PROXY_DLL_BACKUPS)
 
 INJECTOR_FILENAMES = [
-    "dxgi.dll",
-    "winmm.dll",
+    *PROXY_DLL_BACKUPS,
     "nvngx.dll",
     "_nvngx.dll",
     "nvngx-wrapper.dll",
     "dlss-enabler.dll",
     "OptiScaler.dll",
+]
+
+PATCH_CLEANUP_FILES = [
+    *INJECTOR_FILENAMES,
+    "nvapi64.dll",
+    "nvapi64.dll.b",
+    "nvngx.ini",
+    "dlss-enabler-upscaler.dll",
+    "fakenvapi.log",
+    "OptiScaler.log",
+    "dlssg_to_fsr3.log",
+    "dlssg_to_fsr3_amd_is_better-3.0.dll",
+]
+
+PATCH_FINGERPRINT_FILES = [
+    "FRAMEGEN_PATCH",
+    "OptiScaler.ini",
+    "fakenvapi.dll",
+    "fakenvapi.ini",
+    "dlssg_to_fsr3_amd_is_better.dll",
+    "D3D12_Optiscaler",
 ]
 
 ORIGINAL_DLL_BACKUPS = [
@@ -37,6 +60,11 @@ ORIGINAL_DLL_BACKUPS = [
     "amd_fidelityfx_framegeneration_dx12.dll",
     "amd_fidelityfx_upscaler_dx12.dll",
     "amd_fidelityfx_vk.dll",
+]
+
+RESTORABLE_BACKUP_FILES = [
+    *PROXY_DLL_BACKUPS,
+    *ORIGINAL_DLL_BACKUPS,
 ]
 
 SUPPORT_FILES = [
@@ -81,6 +109,7 @@ LEGACY_FILES = [
     "dlss-enabler.dll",
     "dlss-enabler-upscaler.dll",
     "dlss-enabler.log",
+    "nvngx.ini",
     "nvngx-wrapper.dll",
     "_nvngx.dll",
     "dlssg_to_fsr3_amd_is_better-3.0.dll",
@@ -157,6 +186,33 @@ class Plugin:
             decky.logger.error(f"Failed to copy launcher scripts: {e}")
             return False
     
+    def _files_match(self, file_a: Path, file_b: Path) -> bool:
+        try:
+            return file_a.exists() and file_b.exists() and filecmp.cmp(file_a, file_b, shallow=False)
+        except Exception:
+            return False
+
+    def _is_bundled_proxy_copy(self, file_path: Path, fgmod_path: Path) -> bool:
+        bundled_copy = fgmod_path / "renames" / file_path.name
+        return self._files_match(file_path, bundled_copy)
+
+    def _has_patch_fingerprint(self, directory: Path) -> bool:
+        return any((directory / filename).exists() for filename in PATCH_FINGERPRINT_FILES)
+
+    def _backup_preexisting_proxy_files(self, directory: Path, fgmod_path: Path) -> list[str]:
+        backed_up: list[str] = []
+        already_patched = self._has_patch_fingerprint(directory)
+        for filename in PROXY_DLL_BACKUPS:
+            source = directory / filename
+            backup = directory / f"{filename}.b"
+            if not source.exists() or backup.exists():
+                continue
+            if already_patched or self._is_bundled_proxy_copy(source, fgmod_path):
+                continue
+            shutil.move(source, backup)
+            backed_up.append(filename)
+        return backed_up
+
     def _migrate_optiscaler_ini(self, ini_file):
         """Migrate pre-v0.9-final OptiScaler.ini: replace FGType with FGInput + FGOutput.
 
@@ -575,13 +631,24 @@ class Plugin:
         try:
             decky.logger.info(f"Manual patch started for {directory}")
 
-            removed_injectors = []
-            for filename in INJECTOR_FILENAMES:
+            backed_up_proxies = self._backup_preexisting_proxy_files(directory, fgmod_path)
+            decky.logger.info(
+                f"Backed up pre-existing proxy files: {backed_up_proxies}"
+                if backed_up_proxies
+                else "No pre-existing proxy files required backup"
+            )
+
+            removed_patch_files = []
+            for filename in dict.fromkeys(PATCH_CLEANUP_FILES):
                 path = directory / filename
                 if path.exists():
                     path.unlink()
-                    removed_injectors.append(filename)
-            decky.logger.info(f"Removed injector DLLs: {removed_injectors}" if removed_injectors else "No injector DLLs found to remove")
+                    removed_patch_files.append(filename)
+            decky.logger.info(
+                f"Removed stale patch files: {removed_patch_files}"
+                if removed_patch_files
+                else "No stale patch files found to remove"
+            )
 
             backed_up_originals = []
             for dll in ORIGINAL_DLL_BACKUPS:
@@ -590,15 +657,11 @@ class Plugin:
                 if source.exists() and not backup.exists():
                     shutil.move(source, backup)
                     backed_up_originals.append(dll)
-            decky.logger.info(f"Backed up original DLLs: {backed_up_originals}" if backed_up_originals else "No original DLLs required backup")
-
-            removed_legacy = []
-            for legacy in ["nvapi64.dll", "nvapi64.dll.b"]:
-                legacy_path = directory / legacy
-                if legacy_path.exists():
-                    legacy_path.unlink()
-                    removed_legacy.append(legacy)
-            decky.logger.info(f"Removed legacy files: {removed_legacy}" if removed_legacy else "No legacy files to remove")
+            decky.logger.info(
+                f"Backed up original game DLLs: {backed_up_originals}"
+                if backed_up_originals
+                else "No original game DLLs required backup"
+            )
 
             renamed = fgmod_path / "renames" / dll_name
             destination_dll = directory / dll_name
@@ -704,7 +767,7 @@ class Plugin:
                 decky.logger.info(f"Removed D3D12_Optiscaler directory from {d3d12_dir}")
 
             restored_backups = []
-            for dll in ORIGINAL_DLL_BACKUPS:
+            for dll in dict.fromkeys(RESTORABLE_BACKUP_FILES):
                 backup = directory / f"{dll}.b"
                 original = directory / dll
                 if backup.exists():
@@ -1131,7 +1194,7 @@ class Plugin:
             if result["status"] != "success":
                 return result
 
-            backed_up = [dll for dll in ORIGINAL_DLL_BACKUPS if (target_dir / f"{dll}.b").exists()]
+            backed_up = [dll for dll in dict.fromkeys(RESTORABLE_BACKUP_FILES) if (target_dir / f"{dll}.b").exists()]
             marker_path = target_dir / MARKER_FILENAME
             self._write_marker(
                 marker_path,

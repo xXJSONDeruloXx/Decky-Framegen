@@ -150,8 +150,8 @@ rm -f "dlssg_to_fsr3_amd_is_better-3.0.dll"
 
 # === Restore Original DLLs ===
 echo " Restoring original DLLs..."
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
-for dll in "${original_dlls[@]}"; do
+restorable_dlls=("dxgi.dll" "winmm.dll" "dbghelp.dll" "version.dll" "wininet.dll" "winhttp.dll" "OptiScaler.asi" "d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
+for dll in "${restorable_dlls[@]}"; do
   if [[ -f "${dll}.b" ]]; then
     mv "${dll}.b" "$dll"
     echo " Restored original $dll"
