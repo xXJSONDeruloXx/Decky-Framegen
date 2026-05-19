@@ -96,8 +96,66 @@ logger -t fgmod "Target directory: $exe_folder_path"
 logger -t fgmod "Using DLL name: $dll_name"
 logger -t fgmod "Preserve INI: $preserve_ini"
 
-# === Cleanup Old Injectors ===
-rm -f "$exe_folder_path"/{dxgi.dll,winmm.dll,nvngx.dll,_nvngx.dll,nvngx-wrapper.dll,dlss-enabler.dll,OptiScaler.dll}
+proxy_backup_files=(
+  "dxgi.dll"
+  "winmm.dll"
+  "dbghelp.dll"
+  "version.dll"
+  "wininet.dll"
+  "winhttp.dll"
+  "OptiScaler.asi"
+)
+
+cleanup_files=(
+  "${proxy_backup_files[@]}"
+  "OptiScaler.dll"
+  "nvngx.dll"
+  "_nvngx.dll"
+  "nvngx-wrapper.dll"
+  "nvngx.ini"
+  "dlss-enabler.dll"
+  "dlss-enabler-upscaler.dll"
+  "fakenvapi.log"
+  "OptiScaler.log"
+  "dlssg_to_fsr3.log"
+  "dlssg_to_fsr3_amd_is_better-3.0.dll"
+)
+
+is_bundled_proxy_copy() {
+  local existing_file="$1"
+  local bundled_copy="$fgmod_path/renames/$(basename "$existing_file")"
+  [[ -f "$existing_file" && -f "$bundled_copy" ]] && cmp -s "$existing_file" "$bundled_copy"
+}
+
+has_patch_fingerprint() {
+  local fingerprint
+  for fingerprint in "FRAMEGEN_PATCH" "OptiScaler.ini" "fakenvapi.dll" "fakenvapi.ini" "dlssg_to_fsr3_amd_is_better.dll" "D3D12_Optiscaler"; do
+    [[ -e "$exe_folder_path/$fingerprint" ]] && return 0
+  done
+  return 1
+}
+
+# === Backup Pre-existing Proxy DLLs Before Cleanup ===
+for dll in "${proxy_backup_files[@]}"; do
+  existing_path="$exe_folder_path/$dll"
+  backup_path="$exe_folder_path/$dll.b"
+  if [[ -f "$existing_path" && ! -f "$backup_path" ]]; then
+    if has_patch_fingerprint || is_bundled_proxy_copy "$existing_path"; then
+      logger -t fgmod "Skipping backup for managed/stale proxy copy: $dll"
+    else
+      mv -f "$existing_path" "$backup_path"
+      echo " Backed up pre-existing $dll"
+      logger -t fgmod "Backed up pre-existing proxy file: $dll"
+    fi
+  fi
+done
+unset existing_path backup_path fingerprint
+
+# === Cleanup Old Injectors / Legacy OptiScaler Artifacts ===
+for cleanup_file in "${cleanup_files[@]}"; do
+  rm -f "$exe_folder_path/$cleanup_file"
+done
+unset cleanup_file
 
 # === Optional: Backup Original DLLs ===
 original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll")
