@@ -75,6 +75,7 @@ export function InstalledGamesSection() {
     <PanelSection title="Select a Game to Patch:">
       <PanelSectionRow>
         <DropdownItem
+          layout="below"
           rgOptions={games.map(game => ({
             data: game.appid,
             label: game.name

@@ -230,6 +230,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     <>
       <PanelSectionRow>
         <DropdownItem
+          layout="below"
           label="Steam game"
           menuLabel="Select a Steam game"
           strDefaultLabel={gamesLoading ? "Loading games..." : "Choose a game"}

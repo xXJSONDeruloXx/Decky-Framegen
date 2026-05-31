@@ -126,6 +126,7 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
 
       <PanelSectionRow>
         <DropdownItem
+          layout="below"
           label="Default FSR4 runtime"
           description={FSR4_VARIANT_OPTIONS.find((option) => option.value === fsr4Variant)?.hint}
           menuLabel="Default FSR4 runtime"
@@ -149,6 +150,7 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
       {pathExists === true && (
         <PanelSectionRow>
           <DropdownItem
+            layout="below"
             label="Proxy DLL name"
             description={PROXY_DLL_OPTIONS.find((o) => o.value === dllName)?.hint}
             menuLabel="Proxy DLL name"
