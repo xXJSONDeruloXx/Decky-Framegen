@@ -54,9 +54,9 @@
   "remote_binary": 
   [
     {
-      "sha256hash":  "e3ac655d60ec11b471ac8cc5f4d3758e4bce9151c86caa339d8f0700c00282e3",
-      "url":  "https://github.com/optiscaler/OptiScaler/releases/download/v0.9.3/Optiscaler_0.9.3-final.20260618.7z",
-      "name":  "Optiscaler_0.9.3-final.20260618.7z"
+      "sha256hash":  "02b407d69a7372ada6eaa8db2c835e9432a9ec436ffe8eea34eecf9c5f6c240c",
+      "url":  "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/opti-0.9.4-pre1/Optiscaler_0.9.4-pre1.20260623.7z",
+      "name":  "Optiscaler_0.9.4-pre1.20260623.7z"
     },
     {
       "sha256hash": "c7720bc16bede334f59a1a32cd22edbcbbb159685ed5240e61350a5fb0bc8a94",

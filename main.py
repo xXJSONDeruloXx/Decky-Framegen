@@ -10,9 +10,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 OPTISCALER_ARCHIVE_ASSET = {
-    "name": "Optiscaler_0.9.3-final.20260618.7z",
-    "sha256": "e3ac655d60ec11b471ac8cc5f4d3758e4bce9151c86caa339d8f0700c00282e3",
-    "version": "0.9.3-final.20260618",
+    "name": "Optiscaler_0.9.4-pre1.20260623.7z",
+    "sha256": "02b407d69a7372ada6eaa8db2c835e9432a9ec436ffe8eea34eecf9c5f6c240c",
+    "version": "0.9.4-pre1.20260623",
 }
 
 FSR4_INT8_ASSET = {
