@@ -1,6 +1,6 @@
 {
   "name": "decky-framegen",
-  "version": "0.15.7",
+  "version": "0.16.0",
   "description": "This plugin installs and manages OptiScaler, a tool that enhances upscaling and enables frame generation in a range of DirectX 12 games.",
   "type": "module",
   "scripts": {
@@ -67,6 +67,16 @@
       "sha256hash": "a2b136b6affd35a49b141a936be935f7d5ddc8d8f9b8c9afbe62ff9ddb2538a0",
       "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/fsr-4-1-1/amdxcffx64.dll",
       "name": "amdxcffx64.dll"
+    },
+    {
+      "sha256hash": "4e7dc37aebea3a90e3d3cc43e24cb2b54176b2535315f20dbe63b3b7cfc56b1e",
+      "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/fsr-4-1-1-rdna2/amdxcffx64.dll",
+      "name": "amdxcffx64_valve_2.3.0.2913.dll"
+    },
+    {
+      "sha256hash": "b374b19081cc066365d0c6da4808d768e16469b0cbdfc478b6e95999947d5364",
+      "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/fsr-4-1-1-rdna2/OptiScaler_0.10.0-pre1.20260622_135940.dll",
+      "name": "OptiScaler_0.10.0-pre1.20260622_135940.dll"
     },
     {
       "sha256hash": "88b9e1be3559737cd205fdf5f2c8550cf1923fb1def4c603e5bf03c3e84131b1",

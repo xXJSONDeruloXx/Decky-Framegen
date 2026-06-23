@@ -171,6 +171,7 @@ PY
 selected_fsr4_variant="$(resolve_fsr4_variant)"
 variant_dir=""
 variant_extra_files=()
+variant_ini_overrides=()
 case "$selected_fsr4_variant" in
   rdna4-native)
     variant_dir="$fgmod_path/fsr4-rdna4"
@@ -180,6 +181,12 @@ case "$selected_fsr4_variant" in
     variant_dir="$fgmod_path/fsr4-rdna3-4-official-411"
     fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
     variant_extra_files+=("amdxcffx64.dll")
+    ;;
+  rdna2-valve-411-pre10)
+    variant_dir="$fgmod_path/fsr4-rdna2-valve-411-pre10"
+    fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
+    variant_extra_files+=("amdxcffx64.dll")
+    variant_ini_overrides+=("Fsr4ForceModel=2")
     ;;
   *)
     selected_fsr4_variant="rdna23-int8"
@@ -200,7 +207,8 @@ is_managed_support_file() {
       "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" \
       "$fgmod_path/fsr4-rdna2-3/amd_fidelityfx_upscaler_dx12.dll" \
       "$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll" \
-      "$fgmod_path/fsr4-rdna3-4-official-411/amd_fidelityfx_upscaler_dx12.dll"; do
+      "$fgmod_path/fsr4-rdna3-4-official-411/amd_fidelityfx_upscaler_dx12.dll" \
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amd_fidelityfx_upscaler_dx12.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
@@ -208,7 +216,8 @@ is_managed_support_file() {
   if [[ "$filename" == "amdxcffx64.dll" ]]; then
     for candidate in \
       "$fgmod_path/amdxcffx64.dll" \
-      "$fgmod_path/fsr4-rdna3-4-official-411/amdxcffx64.dll"; do
+      "$fgmod_path/fsr4-rdna3-4-official-411/amdxcffx64.dll" \
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amdxcffx64.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
@@ -261,7 +270,13 @@ rm -f "$exe_folder_path/nvapi64.dll" "$exe_folder_path/nvapi64.dll.b"
 echo " Cleaned up nvapi64.dll and backup (legacy fakenvapi conflicts)"
 
 # === Core Install ===
-if [[ -f "$fgmod_path/renames/$dll_name" ]]; then
+if [[ -n "$variant_dir" && -f "$variant_dir/renames/$dll_name" ]]; then
+  echo " Using variant pre-renamed $dll_name"
+  cp "$variant_dir/renames/$dll_name" "$exe_folder_path/$dll_name" || error_exit " Failed to copy variant $dll_name"
+elif [[ -n "$variant_dir" && -f "$variant_dir/OptiScaler.dll" ]]; then
+  echo " Using variant OptiScaler injector"
+  cp "$variant_dir/OptiScaler.dll" "$exe_folder_path/$dll_name" || error_exit " Failed to copy variant OptiScaler.dll as $dll_name"
+elif [[ -f "$fgmod_path/renames/$dll_name" ]]; then
   echo " Using pre-renamed $dll_name"
   cp "$fgmod_path/renames/$dll_name" "$exe_folder_path/$dll_name" || error_exit " Failed to copy $dll_name"
 else
@@ -287,6 +302,18 @@ fi
 # OptiScaler 0.9.0-pre11 can assert on Proton when HQ font auto mode tries to load
 # an external TTF that is not present. Only normalize the default auto value.
 sed -i 's/^UseHQFont[[:space:]]*=[[:space:]]*auto$/UseHQFont=false/' "$exe_folder_path/OptiScaler.ini" || true
+
+for override in "${variant_ini_overrides[@]}"; do
+  key="${override%%=*}"
+  value="${override#*=}"
+  if [[ -n "$key" ]]; then
+    if grep -q "^${key}[[:space:]]*=" "$exe_folder_path/OptiScaler.ini" 2>/dev/null; then
+      sed -i "s/^${key}[[:space:]]*=.*/${key}=${value}/" "$exe_folder_path/OptiScaler.ini" || true
+    else
+      printf '\n%s=%s\n' "$key" "$value" >> "$exe_folder_path/OptiScaler.ini" || true
+    fi
+  fi
+done
 
 # === Migrate FGType → FGInput/FGOutput (pre-v0.9-final INIs) ===
 # v0.9-final split the single FGType key into FGInput + FGOutput. Games that were

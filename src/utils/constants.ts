@@ -75,6 +75,11 @@ export const FSR4_VARIANT_OPTIONS = [
     label: "4.1.1 official for RDNA 3/4",
     hint: "Uses the native 0.9.3 upscaler plus the official amdxcffx64.dll override for RDNA 3/4.",
   },
+  {
+    value: "rdna2-valve-411-pre10",
+    label: "4.1.1 Valve RDNA2 compatibility",
+    hint: "Uses the pre10 OptiScaler injector, native 0.9.3 upscaler, Valve amdxcffx64.dll, and forces FSR4 model 2.",
+  },
 ] as const;
 
 export type Fsr4VariantValue = typeof FSR4_VARIANT_OPTIONS[number]["value"];
