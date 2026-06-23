@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ButtonItem, DropdownItem, Field, PanelSectionRow } from "@decky/ui";
 import { toaster } from "@decky/api";
 import { listInstalledGames, getGameStatus, patchGame, unpatchGame } from "../api";
+import { FSR4_VARIANT_OPTIONS } from "../utils/constants";
 
 // ─── SteamClient helpers ─────────────────────────────────────────────────────
 
@@ -142,6 +143,11 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     [games, selectedAppId]
   );
 
+  const selectedVariantLabel = useMemo(
+    () => FSR4_VARIANT_OPTIONS.find((option) => option.value === fsr4Variant)?.label ?? fsr4Variant,
+    [fsr4Variant]
+  );
+
   const isPatchedWithDifferentDll =
     gameStatus?.patched && gameStatus?.dll_name && gameStatus.dll_name !== dllName;
 
@@ -267,9 +273,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
             <Field {...focusableFieldProps} label="FSR4 runtime">
               {gameStatus?.patched
                 ? (gameStatus?.fsr4_variant_label || "Unknown")
-                : (fsr4Variant === "rdna4-native"
-                    ? "Will patch with Native bundle / RDNA4"
-                    : "Will patch with Steam Deck / RDNA2-3 optimized")}
+                : `Will patch with ${selectedVariantLabel}`}
             </Field>
           </PanelSectionRow>
 
