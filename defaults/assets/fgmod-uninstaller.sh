@@ -115,7 +115,7 @@ rm -f "nvapi64.dll" "fakenvapi.ini" "fakenvapi.log"
 
 # === Remove Supporting Libraries ===
 echo " Removing supporting libraries..."
-rm -f "nvngx.dll" "nvngx.ini"
+rm -f "nvngx.dll" "nvngx.ini" "amdxcffx64.dll"
 # Only remove files if backups exist (to avoid removing restored originals)
 [[ -f "libxess.dll.b" ]] && rm -f "libxess.dll"
 [[ -f "libxess_dx11.dll.b" ]] && rm -f "libxess_dx11.dll"
@@ -124,6 +124,7 @@ rm -f "nvngx.dll" "nvngx.ini"
 [[ -f "amd_fidelityfx_dx12.dll.b" ]] && rm -f "amd_fidelityfx_dx12.dll"
 [[ -f "amd_fidelityfx_framegeneration_dx12.dll.b" ]] && rm -f "amd_fidelityfx_framegeneration_dx12.dll"
 [[ -f "amd_fidelityfx_upscaler_dx12.dll.b" ]] && rm -f "amd_fidelityfx_upscaler_dx12.dll"
+[[ -f "amdxcffx64.dll.b" ]] && rm -f "amdxcffx64.dll"
 [[ -f "amd_fidelityfx_vk.dll.b" ]] && rm -f "amd_fidelityfx_vk.dll"
 
 # === Remove FG Mod Files ===
@@ -150,7 +151,7 @@ rm -f "dlssg_to_fsr3_amd_is_better-3.0.dll"
 
 # === Restore Original DLLs ===
 echo " Restoring original DLLs..."
-restorable_dlls=("dxgi.dll" "winmm.dll" "dbghelp.dll" "version.dll" "wininet.dll" "winhttp.dll" "OptiScaler.asi" "d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
+restorable_dlls=("dxgi.dll" "winmm.dll" "dbghelp.dll" "version.dll" "wininet.dll" "winhttp.dll" "OptiScaler.asi" "d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amdxcffx64.dll" "amd_fidelityfx_vk.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
 for dll in "${restorable_dlls[@]}"; do
   if [[ -f "${dll}.b" ]]; then
     mv "${dll}.b" "$dll"

@@ -111,6 +111,7 @@ proxy_backup_files=(
 cleanup_files=(
   "${proxy_backup_files[@]}"
   "OptiScaler.dll"
+  "amdxcffx64.dll"
   "nvngx.dll"
   "_nvngx.dll"
   "nvngx-wrapper.dll"
@@ -168,13 +169,22 @@ PY
 }
 
 selected_fsr4_variant="$(resolve_fsr4_variant)"
+variant_dir=""
+variant_extra_files=()
 case "$selected_fsr4_variant" in
   rdna4-native)
-    fsr4_upscaler_src="$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll"
+    variant_dir="$fgmod_path/fsr4-rdna4"
+    fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
+    ;;
+  rdna34-official-411)
+    variant_dir="$fgmod_path/fsr4-rdna3-4-official-411"
+    fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
+    variant_extra_files+=("amdxcffx64.dll")
     ;;
   *)
     selected_fsr4_variant="rdna23-int8"
-    fsr4_upscaler_src="$fgmod_path/fsr4-rdna2-3/amd_fidelityfx_upscaler_dx12.dll"
+    variant_dir="$fgmod_path/fsr4-rdna2-3"
+    fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
     ;;
 esac
 [[ -f "$fsr4_upscaler_src" ]] || fsr4_upscaler_src="$fgmod_path/amd_fidelityfx_upscaler_dx12.dll"
@@ -189,7 +199,16 @@ is_managed_support_file() {
     for candidate in \
       "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" \
       "$fgmod_path/fsr4-rdna2-3/amd_fidelityfx_upscaler_dx12.dll" \
-      "$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll"; do
+      "$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll" \
+      "$fgmod_path/fsr4-rdna3-4-official-411/amd_fidelityfx_upscaler_dx12.dll"; do
+      [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
+    done
+    return 1
+  fi
+  if [[ "$filename" == "amdxcffx64.dll" ]]; then
+    for candidate in \
+      "$fgmod_path/amdxcffx64.dll" \
+      "$fgmod_path/fsr4-rdna3-4-official-411/amdxcffx64.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
@@ -221,7 +240,7 @@ done
 unset cleanup_file
 
 # === Optional: Backup Original DLLs ===
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amd_fidelityfx_vk.dll")
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amdxcffx64.dll" "amd_fidelityfx_vk.dll")
 for dll in "${original_dlls[@]}"; do
   existing_path="$exe_folder_path/$dll"
   backup_path="$exe_folder_path/$dll.b"
@@ -315,6 +334,11 @@ cp -f "$fgmod_path/amd_fidelityfx_dx12.dll" "$exe_folder_path/" || true
 cp -f "$fgmod_path/amd_fidelityfx_framegeneration_dx12.dll" "$exe_folder_path/" || true
 cp -f "$fsr4_upscaler_src" "$exe_folder_path/amd_fidelityfx_upscaler_dx12.dll" || true
 cp -f "$fgmod_path/amd_fidelityfx_vk.dll" "$exe_folder_path/" || true
+for extra_file in "${variant_extra_files[@]}"; do
+  if [[ -f "$variant_dir/$extra_file" ]]; then
+    cp -f "$variant_dir/$extra_file" "$exe_folder_path/" || true
+  fi
+done
 
 # === Nukem FG Mod Files (now in fgmod directory) ===
 cp -f "$fgmod_path/dlssg_to_fsr3_amd_is_better.dll" "$exe_folder_path/" || true
