@@ -33,6 +33,12 @@ FSR4_VALVE_411_ASSET = {
     "version": "4.1.1-valve-2.3.0.2913",
 }
 
+AMDXC64_RDNA2_ASSET = {
+    "name": "amdxc64.dll",
+    "sha256": "a0a0af61d475e30a70966b3459f3793df772faf8f26ae3261d10554ff592cbd5",
+    "version": "8.18.10.0474",
+}
+
 OPTISCALER_PRE10_ASSET = {
     "name": "OptiScaler_0.10.0-pre1.20260622_135940.dll",
     "sha256": "b374b19081cc066365d0c6da4808d768e16469b0cbdfc478b6e95999947d5364",
@@ -60,9 +66,6 @@ FSR4_VARIANTS = {
         "source_version": FSR4_INT8_ASSET["version"],
         "uses_archive_native": False,
         "extra_files": [],
-        "config_overrides": {
-            "Fsr4ForceModel": "2",
-        },
     },
     "rdna4-native": {
         "label": "Native bundle / RDNA4",
@@ -88,9 +91,7 @@ FSR4_VARIANTS = {
                 "source_version": FSR4_OFFICIAL_411_ASSET["version"],
             }
         ],
-        "config_overrides": {
-            "Fsr4ForceModel": "2",
-        },
+        "config_overrides": {},
     },
     "rdna2-valve-411-pre10": {
         "label": "4.1.1 Valve RDNA2 compatibility",
@@ -111,10 +112,17 @@ FSR4_VARIANTS = {
                 "sha256": FSR4_VALVE_411_ASSET["sha256"],
                 "source_asset_name": FSR4_VALVE_411_ASSET["name"],
                 "source_version": FSR4_VALVE_411_ASSET["version"],
+            },
+            {
+                "name": "amdxc64.dll",
+                "sha256": AMDXC64_RDNA2_ASSET["sha256"],
+                "source_asset_name": AMDXC64_RDNA2_ASSET["name"],
+                "source_version": AMDXC64_RDNA2_ASSET["version"],
             }
         ],
         "config_overrides": {
-            "Fsr4ForceModel": "2",
+            "FSR.Fsr4ForceModel": "2",
+            "Plugins.LoadCustomAmdxc64OnRdna2": "true",
         },
     },
 }
@@ -175,6 +183,7 @@ ORIGINAL_DLL_BACKUPS = [
     "amd_fidelityfx_framegeneration_dx12.dll",
     FSR4_UPSCALER_FILENAME,
     FSR4_DRIVER_OVERRIDE_FILENAME,
+    "amdxc64.dll",
     "amd_fidelityfx_vk.dll",
 ]
 
@@ -439,25 +448,79 @@ class Plugin:
         overrides = variant.get("config_overrides") or {}
         return dict(overrides) if isinstance(overrides, dict) else {}
 
+    def _split_ini_override_key(self, raw_key: str) -> tuple[str | None, str]:
+        key = str(raw_key).strip()
+        if "." in key:
+            section, section_key = key.split(".", 1)
+            section = section.strip()
+            section_key = section_key.strip()
+            if section and section_key:
+                return section, section_key
+        return None, key
+
     def _apply_optiscaler_ini_overrides(self, ini_file: Path, overrides: dict) -> bool:
         if not overrides:
             return True
         try:
             content = ini_file.read_text(encoding="utf-8", errors="replace")
-            for key, value in overrides.items():
-                key = str(key).strip()
-                value = str(value).strip()
-                if not key:
-                    continue
-                pattern = re.compile(rf"^{re.escape(key)}\s*=.*$", re.MULTILINE)
+            newline = "\r\n" if "\r\n" in content else "\n"
+            lines = content.splitlines(keepends=True)
+            section_pattern = re.compile(r"^\s*\[(?P<section>[^\]]+)\]\s*$")
+
+            def ensure_trailing_newline() -> None:
+                if lines and not lines[-1].endswith(("\n", "\r")):
+                    lines[-1] += newline
+
+            def upsert(section: str | None, key: str, value: str) -> None:
                 replacement = f"{key}={value}"
-                if pattern.search(content):
-                    content = pattern.sub(replacement, content)
-                else:
-                    if content and not content.endswith("\n"):
-                        content += "\n"
-                    content += f"{replacement}\n"
-            ini_file.write_text(content, encoding="utf-8")
+                key_pattern = re.compile(rf"^(\s*{re.escape(key)}\s*)=.*$")
+
+                if section is None:
+                    for idx, line in enumerate(lines):
+                        if key_pattern.match(line):
+                            line_ending = "\r\n" if line.endswith("\r\n") else ("\n" if line.endswith("\n") else newline)
+                            lines[idx] = f"{replacement}{line_ending}"
+                            return
+                    ensure_trailing_newline()
+                    lines.append(f"{replacement}{newline}")
+                    return
+
+                in_section = False
+                insert_at = None
+                for idx, line in enumerate(lines):
+                    match = section_pattern.match(line.strip())
+                    if match:
+                        if in_section:
+                            insert_at = idx
+                            break
+                        if match.group("section") == section:
+                            in_section = True
+                            continue
+                    if in_section and key_pattern.match(line):
+                        line_ending = "\r\n" if line.endswith("\r\n") else ("\n" if line.endswith("\n") else newline)
+                        lines[idx] = f"{replacement}{line_ending}"
+                        return
+
+                if in_section:
+                    if insert_at is None:
+                        ensure_trailing_newline()
+                        insert_at = len(lines)
+                    lines.insert(insert_at, f"{replacement}{newline}")
+                    return
+
+                ensure_trailing_newline()
+                if lines and lines[-1].strip():
+                    lines.append(newline)
+                lines.append(f"[{section}]{newline}")
+                lines.append(f"{replacement}{newline}")
+
+            for raw_key, raw_value in overrides.items():
+                section, key = self._split_ini_override_key(str(raw_key))
+                value = str(raw_value).strip()
+                if key:
+                    upsert(section, key, value)
+
+            ini_file.write_text("".join(lines), encoding="utf-8")
             return True
         except Exception as exc:
             decky.logger.error(f"Failed to apply OptiScaler.ini overrides to {ini_file}: {exc}")
@@ -669,6 +732,7 @@ class Plugin:
             fsr4_int8_src = bin_path / FSR4_INT8_ASSET["name"]
             fsr4_official_411_src = bin_path / FSR4_OFFICIAL_411_ASSET["name"]
             fsr4_valve_411_src = bin_path / FSR4_VALVE_411_ASSET["name"]
+            amdxc64_rdna2_src = bin_path / AMDXC64_RDNA2_ASSET["name"]
             optiscaler_pre10_src = bin_path / OPTISCALER_PRE10_ASSET["name"]
             optipatcher_src = bin_path / OPTIPATCHER_ASSET["name"]
             for required_path, asset in [
@@ -676,6 +740,7 @@ class Plugin:
                 (fsr4_int8_src, FSR4_INT8_ASSET),
                 (fsr4_official_411_src, FSR4_OFFICIAL_411_ASSET),
                 (fsr4_valve_411_src, FSR4_VALVE_411_ASSET),
+                (amdxc64_rdna2_src, AMDXC64_RDNA2_ASSET),
                 (optiscaler_pre10_src, OPTISCALER_PRE10_ASSET),
                 (optipatcher_src, OPTIPATCHER_ASSET),
             ]:
@@ -772,6 +837,18 @@ class Plugin:
                 rdna2_valve_driver,
                 FSR4_VALVE_411_ASSET["sha256"],
                 "Prepared rdna2-valve-411-pre10 driver override",
+            )
+            self._verify_bundled_asset(
+                amdxc64_rdna2_src,
+                AMDXC64_RDNA2_ASSET["sha256"],
+                "Bundled rdna2-valve-411-pre10 amdxc64 override",
+            )
+            rdna2_valve_amdxc64 = rdna2_valve_dir / "amdxc64.dll"
+            shutil.copy2(amdxc64_rdna2_src, rdna2_valve_amdxc64)
+            self._verify_bundled_asset(
+                rdna2_valve_amdxc64,
+                AMDXC64_RDNA2_ASSET["sha256"],
+                "Prepared rdna2-valve-411-pre10 amdxc64 override",
             )
             self._verify_bundled_asset(
                 optiscaler_pre10_src,
@@ -1069,7 +1146,8 @@ class Plugin:
         selected_variant_info = FSR4_VARIANTS[selected_variant]
         selected_config_overrides = self._fsr4_variant_config_overrides(selected_variant)
         if previous_variant == "rdna2-valve-411-pre10" and selected_variant != previous_variant:
-            selected_config_overrides.setdefault("Fsr4ForceModel", "auto")
+            selected_config_overrides.setdefault("FSR.Fsr4ForceModel", "auto")
+            selected_config_overrides.setdefault("Plugins.LoadCustomAmdxc64OnRdna2", "false")
         selected_upscaler_src = self._fsr4_variant_path(fgmod_path, selected_variant)
         if not selected_upscaler_src.exists():
             selected_upscaler_src = fgmod_path / FSR4_UPSCALER_FILENAME

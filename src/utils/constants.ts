@@ -78,7 +78,7 @@ export const FSR4_VARIANT_OPTIONS = [
   {
     value: "rdna2-valve-411-pre10",
     label: "4.1.1 | RDNA2 Mod",
-    hint: "Uses the pre10 OptiScaler injector, 4.1.0 native upscaler, Valve 4.1.1 amdxcffx64.dll, and forces FSR4 model 2.",
+    hint: "Uses the pre10 OptiScaler injector, 4.1.0 native upscaler, Valve 4.1.1 amdxcffx64.dll, old amdxc64.dll, and RDNA2-specific INI overrides.",
   },
 ] as const;
 
