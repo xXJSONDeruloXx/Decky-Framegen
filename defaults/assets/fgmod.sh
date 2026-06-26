@@ -112,6 +112,7 @@ cleanup_files=(
   "${proxy_backup_files[@]}"
   "OptiScaler.dll"
   "amdxcffx64.dll"
+  "amdxc64.dll"
   "nvngx.dll"
   "_nvngx.dll"
   "nvngx-wrapper.dll"
@@ -171,6 +172,7 @@ PY
 selected_fsr4_variant="$(resolve_fsr4_variant)"
 variant_dir=""
 variant_extra_files=()
+variant_ini_overrides=()
 case "$selected_fsr4_variant" in
   rdna4-native)
     variant_dir="$fgmod_path/fsr4-rdna4"
@@ -180,6 +182,13 @@ case "$selected_fsr4_variant" in
     variant_dir="$fgmod_path/fsr4-rdna3-4-official-411"
     fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
     variant_extra_files+=("amdxcffx64.dll")
+    ;;
+  rdna2-valve-411-pre10)
+    variant_dir="$fgmod_path/fsr4-rdna2-valve-411-pre10"
+    fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
+    variant_extra_files+=("amdxcffx64.dll" "amdxc64.dll")
+    variant_ini_overrides+=("FSR.Fsr4ForceModel=2")
+    variant_ini_overrides+=("Plugins.LoadCustomAmdxc64OnRdna2=true")
     ;;
   *)
     selected_fsr4_variant="rdna23-int8"
@@ -200,7 +209,8 @@ is_managed_support_file() {
       "$fgmod_path/amd_fidelityfx_upscaler_dx12.dll" \
       "$fgmod_path/fsr4-rdna2-3/amd_fidelityfx_upscaler_dx12.dll" \
       "$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll" \
-      "$fgmod_path/fsr4-rdna3-4-official-411/amd_fidelityfx_upscaler_dx12.dll"; do
+      "$fgmod_path/fsr4-rdna3-4-official-411/amd_fidelityfx_upscaler_dx12.dll" \
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amd_fidelityfx_upscaler_dx12.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
@@ -208,7 +218,15 @@ is_managed_support_file() {
   if [[ "$filename" == "amdxcffx64.dll" ]]; then
     for candidate in \
       "$fgmod_path/amdxcffx64.dll" \
-      "$fgmod_path/fsr4-rdna3-4-official-411/amdxcffx64.dll"; do
+      "$fgmod_path/fsr4-rdna3-4-official-411/amdxcffx64.dll" \
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amdxcffx64.dll"; do
+      [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
+    done
+    return 1
+  fi
+  if [[ "$filename" == "amdxc64.dll" ]]; then
+    for candidate in \
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amdxc64.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
@@ -240,7 +258,7 @@ done
 unset cleanup_file
 
 # === Optional: Backup Original DLLs ===
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amdxcffx64.dll" "amd_fidelityfx_vk.dll")
+original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amdxcffx64.dll" "amdxc64.dll" "amd_fidelityfx_vk.dll")
 for dll in "${original_dlls[@]}"; do
   existing_path="$exe_folder_path/$dll"
   backup_path="$exe_folder_path/$dll.b"
@@ -261,7 +279,13 @@ rm -f "$exe_folder_path/nvapi64.dll" "$exe_folder_path/nvapi64.dll.b"
 echo " Cleaned up nvapi64.dll and backup (legacy fakenvapi conflicts)"
 
 # === Core Install ===
-if [[ -f "$fgmod_path/renames/$dll_name" ]]; then
+if [[ -n "$variant_dir" && -f "$variant_dir/renames/$dll_name" ]]; then
+  echo " Using variant pre-renamed $dll_name"
+  cp "$variant_dir/renames/$dll_name" "$exe_folder_path/$dll_name" || error_exit " Failed to copy variant $dll_name"
+elif [[ -n "$variant_dir" && -f "$variant_dir/OptiScaler.dll" ]]; then
+  echo " Using variant OptiScaler injector"
+  cp "$variant_dir/OptiScaler.dll" "$exe_folder_path/$dll_name" || error_exit " Failed to copy variant OptiScaler.dll as $dll_name"
+elif [[ -f "$fgmod_path/renames/$dll_name" ]]; then
   echo " Using pre-renamed $dll_name"
   cp "$fgmod_path/renames/$dll_name" "$exe_folder_path/$dll_name" || error_exit " Failed to copy $dll_name"
 else
@@ -287,6 +311,78 @@ fi
 # OptiScaler 0.9.0-pre11 can assert on Proton when HQ font auto mode tries to load
 # an external TTF that is not present. Only normalize the default auto value.
 sed -i 's/^UseHQFont[[:space:]]*=[[:space:]]*auto$/UseHQFont=false/' "$exe_folder_path/OptiScaler.ini" || true
+
+if [[ ${#variant_ini_overrides[@]} -gt 0 && -n "$python_bin" ]]; then
+  "$python_bin" - "$exe_folder_path/OptiScaler.ini" "${variant_ini_overrides[@]}" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+overrides = sys.argv[2:]
+content = path.read_text(encoding='utf-8', errors='replace')
+newline = '\r\n' if '\r\n' in content else '\n'
+lines = content.splitlines(keepends=True)
+section_pattern = re.compile(r'^\s*\[(?P<section>[^\]]+)\]\s*$')
+
+def ensure_trailing_newline():
+    if lines and not lines[-1].endswith(('\n', '\r')):
+        lines[-1] += newline
+
+def upsert(section, key, value):
+    replacement = f'{key}={value}'
+    key_pattern = re.compile(rf'^(\s*{re.escape(key)}\s*)=.*$')
+    if section is None:
+        for idx, line in enumerate(lines):
+            if key_pattern.match(line):
+                line_ending = '\r\n' if line.endswith('\r\n') else ('\n' if line.endswith('\n') else newline)
+                lines[idx] = f'{replacement}{line_ending}'
+                return
+        ensure_trailing_newline()
+        lines.append(f'{replacement}{newline}')
+        return
+
+    in_section = False
+    insert_at = None
+    for idx, line in enumerate(lines):
+        match = section_pattern.match(line.strip())
+        if match:
+            if in_section:
+                insert_at = idx
+                break
+            if match.group('section') == section:
+                in_section = True
+                continue
+        if in_section and key_pattern.match(line):
+            line_ending = '\r\n' if line.endswith('\r\n') else ('\n' if line.endswith('\n') else newline)
+            lines[idx] = f'{replacement}{line_ending}'
+            return
+
+    if in_section:
+        if insert_at is None:
+            ensure_trailing_newline()
+            insert_at = len(lines)
+        lines.insert(insert_at, f'{replacement}{newline}')
+        return
+
+    ensure_trailing_newline()
+    if lines and lines[-1].strip():
+        lines.append(newline)
+    lines.append(f'[{section}]{newline}')
+    lines.append(f'{replacement}{newline}')
+
+for override in overrides:
+    key_part, value = override.split('=', 1)
+    if '.' in key_part:
+        section, key = key_part.split('.', 1)
+    else:
+        section, key = None, key_part
+    if key:
+        upsert(section.strip() if section else None, key.strip(), value.strip())
+
+path.write_text(''.join(lines), encoding='utf-8')
+PY
+fi
 
 # === Migrate FGType → FGInput/FGOutput (pre-v0.9-final INIs) ===
 # v0.9-final split the single FGType key into FGInput + FGOutput. Games that were

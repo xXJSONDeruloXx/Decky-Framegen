@@ -62,18 +62,23 @@ export const DEFAULT_PROXY_DLL: ProxyDllValue = "dxgi.dll";
 export const FSR4_VARIANT_OPTIONS = [
   {
     value: "rdna23-int8",
-    label: "Steam Deck / RDNA2-3 optimized",
+    label: "4.0.2c | RDNA2/3 Mod",
     hint: "Uses the bundled FSR4 INT8 4.0.2c override. Recommended for Steam Deck and other non-RDNA4 systems.",
   },
   {
     value: "rdna4-native",
-    label: "Native bundle / RDNA4",
-    hint: "Uses the amd_fidelityfx_upscaler_dx12.dll that ships inside the OptiScaler 0.9.3 bundle.",
+    label: "4.1.0 | RDNA4 Official",
+    hint: "Uses the AMD-supplied 4.1.0 amd_fidelityfx_upscaler_dx12.dll redistributed in the OptiScaler bundle.",
   },
   {
     value: "rdna34-official-411",
-    label: "4.1.1 official for RDNA 3/4",
-    hint: "Uses the native 0.9.3 upscaler plus the official amdxcffx64.dll override for RDNA 3/4.",
+    label: "4.1.1 | RDNA3/4 Official",
+    hint: "Uses the 4.1.0 native upscaler plus the official 4.1.1 amdxcffx64.dll override for RDNA 3/4.",
+  },
+  {
+    value: "rdna2-valve-411-pre10",
+    label: "4.1.1 | RDNA2 Mod",
+    hint: "Uses the pre10 OptiScaler injector, 4.1.0 native upscaler, Valve 4.1.1 amdxcffx64.dll, old amdxc64.dll, and RDNA2-specific INI overrides.",
   },
 ] as const;
 
