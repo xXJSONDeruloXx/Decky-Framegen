@@ -181,6 +181,7 @@ case "$selected_fsr4_variant" in
     variant_dir="$fgmod_path/fsr4-rdna3-4-official-411"
     fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
     variant_extra_files+=("amdxcffx64.dll")
+    variant_ini_overrides+=("Fsr4ForceModel=2")
     ;;
   rdna2-valve-411-pre10)
     variant_dir="$fgmod_path/fsr4-rdna2-valve-411-pre10"
@@ -192,6 +193,7 @@ case "$selected_fsr4_variant" in
     selected_fsr4_variant="rdna23-int8"
     variant_dir="$fgmod_path/fsr4-rdna2-3"
     fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
+    variant_ini_overrides+=("Fsr4ForceModel=2")
     ;;
 esac
 [[ -f "$fsr4_upscaler_src" ]] || fsr4_upscaler_src="$fgmod_path/amd_fidelityfx_upscaler_dx12.dll"

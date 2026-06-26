@@ -60,6 +60,9 @@ FSR4_VARIANTS = {
         "source_version": FSR4_INT8_ASSET["version"],
         "uses_archive_native": False,
         "extra_files": [],
+        "config_overrides": {
+            "Fsr4ForceModel": "2",
+        },
     },
     "rdna4-native": {
         "label": "Native bundle / RDNA4",
@@ -85,7 +88,9 @@ FSR4_VARIANTS = {
                 "source_version": FSR4_OFFICIAL_411_ASSET["version"],
             }
         ],
-        "config_overrides": {},
+        "config_overrides": {
+            "Fsr4ForceModel": "2",
+        },
     },
     "rdna2-valve-411-pre10": {
         "label": "4.1.1 Valve RDNA2 compatibility",
