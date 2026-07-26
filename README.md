@@ -80,7 +80,7 @@ Dx12Upscaler=fsr31 ~/fgmod/fgmod %command%
 ## Technical Details
 
 ### What's Included
-- **[OptiScaler 0.9.3](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.3)**: Official upstream OptiScaler bundle used by this plugin, with bundled FSR4 runtime variants for the archive-native RDNA4 path, the Steam Deck / RDNA2-3 optimized INT8 override, or the official 4.1.1 RDNA 3/4 override
+- **[OptiScaler 0.9.3](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.3)**: Official upstream OptiScaler bundle used by this plugin, with bundled FSR4 runtime variants for the archive-native RDNA4 path, the Steam Deck / RDNA2-3 optimized INT8 override, the official 4.1.1 RDNA 3/4 override, or the experimental Valve 4.1.1 RDNA2 compatibility path with a pre10 OptiScaler injector
 - **Nukem9's DLSSG to FSR3 mod**: Allows use of DLSS inputs for FSR frame gen outputs, and xess or FSR upscaling outputs
 - **FakeNVAPI**: NVIDIA API emulation for AMD/Intel GPUs, to make DLSS options selectable in game
 - **Supporting Libraries**: All required DX12/Vulkan libraries (libxess.dll, amd_fidelityfx, etc.)
