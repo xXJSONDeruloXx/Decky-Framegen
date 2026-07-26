@@ -10,9 +10,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 OPTISCALER_ARCHIVE_ASSET = {
-    "name": "Optiscaler_0.9.4-pre1.20260623.7z",
-    "sha256": "02b407d69a7372ada6eaa8db2c835e9432a9ec436ffe8eea34eecf9c5f6c240c",
-    "version": "0.9.4-pre1.20260623",
+    "name": "Optiscaler_0.9.4-final.20260718._MM.7z",
+    "sha256": "575cb4df866116093df75af607e37fd70e10f5163e0f23fd5c804142e80ef0ad",
+    "version": "0.9.4-final.20260718",
 }
 
 FSR4_INT8_ASSET = {
@@ -59,7 +59,7 @@ DEFAULT_FSR4_VARIANT = "rdna23-int8"
 
 FSR4_VARIANTS = {
     "rdna23-int8": {
-        "label": "Steam Deck / RDNA2-3 optimized",
+        "label": "4.0.2c / RDNA2-3 compatibility",
         "dir_name": "fsr4-rdna2-3",
         "sha256": "c7720bc16bede334f59a1a32cd22edbcbbb159685ed5240e61350a5fb0bc8a94",
         "source_asset_name": FSR4_INT8_ASSET["name"],
@@ -68,18 +68,18 @@ FSR4_VARIANTS = {
         "extra_files": [],
     },
     "rdna4-native": {
-        "label": "Native bundle / RDNA4",
+        "label": "4.1.1 SDK / RDNA3 dGPU + RDNA4",
         "dir_name": "fsr4-rdna4",
-        "sha256": "ec7ed3ca674e288240e6f04b986342aece47454c41d9b0959449e82e22bd7f6d",
+        "sha256": "d0dcccc74a43c44ba435b7a369b456e0970d8a4464e4bd683119b374f2c9fb46",
         "source_asset_name": OPTISCALER_ARCHIVE_ASSET["name"],
         "source_version": OPTISCALER_ARCHIVE_ASSET["version"],
         "uses_archive_native": True,
         "extra_files": [],
     },
     "rdna34-official-411": {
-        "label": "4.1.1 official for RDNA 3/4",
+        "label": "4.1.1 driver override / RDNA3-4",
         "dir_name": "fsr4-rdna3-4-official-411",
-        "sha256": "ec7ed3ca674e288240e6f04b986342aece47454c41d9b0959449e82e22bd7f6d",
+        "sha256": "d0dcccc74a43c44ba435b7a369b456e0970d8a4464e4bd683119b374f2c9fb46",
         "source_asset_name": OPTISCALER_ARCHIVE_ASSET["name"],
         "source_version": OPTISCALER_ARCHIVE_ASSET["version"],
         "uses_archive_native": True,
@@ -96,7 +96,7 @@ FSR4_VARIANTS = {
     "rdna2-valve-411-pre10": {
         "label": "4.1.1 Valve RDNA2 compatibility",
         "dir_name": "fsr4-rdna2-valve-411-pre10",
-        "sha256": "ec7ed3ca674e288240e6f04b986342aece47454c41d9b0959449e82e22bd7f6d",
+        "sha256": "d0dcccc74a43c44ba435b7a369b456e0970d8a4464e4bd683119b374f2c9fb46",
         "source_asset_name": OPTISCALER_ARCHIVE_ASSET["name"],
         "source_version": OPTISCALER_ARCHIVE_ASSET["version"],
         "uses_archive_native": True,
