@@ -76,11 +76,21 @@ Dx12Upscaler=fsr31 ~/fgmod/fgmod %command%
 - Environment variables override the OptiScaler.ini file on each game launch
 - Hyphenated section names like `[V-Sync]` can be accessed like `VSync_Option=value`
 - If an option name appears in multiple sections of the OptiScaler.ini file, use the `Section_Option` or `OptiScaler_Section_Option` format
+- OptiScaler 0.9.4 adds `FSR_Fsr4ForceEnableInt8=true` for the bundled SDK upscaler. It can force INT8 on unsupported GPUs that support INT8, but does not make older non-INT8 hardware compatible and does not affect the `amdxcffx64.dll` driver override. Enable `FSR_Fsr4EnableWatermark=true` to verify the active FSR runtime.
+
+### Choosing an FSR4 Runtime
+
+- **4.1.1 FFX 2.3 SDK**: The upstream 0.9.4 bundled path. Official FSR4 support is RDNA4 (FP8) and RDNA3 desktop GPUs (INT8); it is the only bundled path affected by `Fsr4ForceEnableInt8`.
+- **4.1.1 Valve RDNA2 Compatibility**: The RDNA2 compatibility option. It uses the final SDK upscaler with the Valve `amdxcffx64.dll`, `amdxc64.dll`, the pre10 OptiScaler injector, and RDNA2-specific INI overrides.
+- **4.1.1 Driver Override**: Uses the same final SDK upscaler plus a separate `amdxcffx64.dll` AMD driver provider. It is a fallback/testing path and is not bundled by upstream 0.9.4.
+- **4.0.2c RDNA2/3 Compatibility**: Older compatibility runtime. Prefer the Valve 4.1.1 path for RDNA2 or the regular 4.1.1 driver override when those work for the game.
+
+FSR 4.1.1 can fall back internally to FSR3 on unsupported hardware. Check the FSR4 watermark (`FSR4`, `FSR4-i8`, or `FSR3`) after changing a runtime to confirm the active path.
 
 ## Technical Details
 
 ### What's Included
-- **[OptiScaler 0.9.3](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.3)**: Official upstream OptiScaler bundle used by this plugin, with bundled FSR4 runtime variants for the archive-native RDNA4 path, the Steam Deck / RDNA2-3 optimized INT8 override, the official 4.1.1 RDNA 3/4 override, or the experimental Valve 4.1.1 RDNA2 compatibility path with a pre10 OptiScaler injector
+- **[OptiScaler 0.9.4](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.4)**: Official upstream final bundle with the FFX 2.3 SDK / FSR4.1.1. The plugin retains its separately bundled FSR4.0.2c compatibility runtime and existing 4.1.1 driver-override variants; the final upstream archive itself does not include those driver-override DLLs.
 - **Nukem9's DLSSG to FSR3 mod**: Allows use of DLSS inputs for FSR frame gen outputs, and xess or FSR upscaling outputs
 - **FakeNVAPI**: NVIDIA API emulation for AMD/Intel GPUs, to make DLSS options selectable in game
 - **Supporting Libraries**: All required DX12/Vulkan libraries (libxess.dll, amd_fidelityfx, etc.)
