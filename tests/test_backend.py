@@ -1,11 +1,14 @@
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from backend import config
-from backend.bundle import BundleManager
-from backend.patcher import PatchManager
-from backend.steam import SteamLibrary
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "py_modules"))
+
+from services import config
+from services.bundle import BundleManager
+from services.patcher import PatchManager
+from services.steam import SteamLibrary
 
 
 class BackendSafetyTests(unittest.TestCase):

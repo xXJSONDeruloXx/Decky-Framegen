@@ -1,17 +1,17 @@
 """Decky entry point for the Framegen plugin.
 
 Decky-facing methods live here; filesystem, Steam, configuration, and patch
-ownership concerns are implemented in ``backend`` services.
+ownership concerns are implemented in focused service modules.
 """
 
 from pathlib import Path
 
 import decky
 
-from backend.assets import DEFAULT_FRAMEGEN_BACKEND, DEFAULT_FSR4_VARIANT
-from backend.bundle import BundleManager
-from backend.patcher import PatchManager
-from backend.steam import SteamLibrary
+from services.assets import DEFAULT_FRAMEGEN_BACKEND, DEFAULT_FSR4_VARIANT
+from services.bundle import BundleManager
+from services.patcher import PatchManager
+from services.steam import SteamLibrary
 
 
 class Plugin:

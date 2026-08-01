@@ -1,4 +1,4 @@
-"""Small filesystem helpers shared by backend services."""
+"""Small filesystem helpers shared by service modules."""
 
 import filecmp
 import hashlib
