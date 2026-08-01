@@ -320,6 +320,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
       return (
         <PanelSectionRow key={setting.id}>
           <DropdownItem
+            layout="below"
             label={setting.label}
             description={setting.description}
             rgOptions={options.map((option) => ({ data: option.value, label: option.label }))}
@@ -341,6 +342,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
         <div key={setting.id}>
           <PanelSectionRow>
             <DropdownItem
+              layout="below"
               label={setting.label}
               description={setting.description}
               rgOptions={[
@@ -435,6 +437,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
 
       <PanelSectionRow>
         <DropdownItem
+          layout="below"
           label="Target game"
           rgOptions={games.map((game) => ({
             data: String(game.appid),
@@ -520,6 +523,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
 
           <PanelSectionRow>
             <DropdownItem
+              layout="below"
               label="Proxy DLL"
               description="Persisted per game and used by the wrapper on next launch. Changes autosave immediately."
               rgOptions={["winmm", "dxgi", "version", "dbghelp", "winhttp", "wininet", "d3d12"].map((proxy) => ({
@@ -535,6 +539,7 @@ export function InstalledGamesSection({ isAvailable }: InstalledGamesSectionProp
 
           <PanelSectionRow>
             <DropdownItem
+              layout="below"
               label="Config section"
               description="Browse and edit every setting parsed from the bundled OptiScaler.ini template."
               rgOptions={sectionOptions}
