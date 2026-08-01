@@ -38,6 +38,7 @@ interface ManualPatchControlsProps {
   onManualModeChange?: (enabled: boolean) => void;
   dllName: string;
   fsr4Variant: string;
+  framegenBackend: string;
 }
 
 interface PickerState {
@@ -58,7 +59,7 @@ const formatResultMessage = (result: ApiResponse | null) => {
   return result.message || result.output || "Operation failed.";
 };
 
-export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, fsr4Variant }: ManualPatchControlsProps) => {
+export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, fsr4Variant, framegenBackend }: ManualPatchControlsProps) => {
   const [isEnabled, setEnabled] = useState(false);
   const [defaults, setDefaults] = useState<PathDefaults>(INITIAL_DEFAULTS);
   const [pickerState, setPickerState] = useState<PickerState>(INITIAL_PICKER_STATE);
@@ -160,14 +161,14 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
       if (!selectedPath) return;
 
       const setBusy = action === "patch" ? setIsPatching : setIsUnpatching;
-  setLastOperation(action);
+      setLastOperation(action);
       setBusy(true);
       setOperationResult(null);
 
       try {
         const response =
           action === "patch"
-            ? await runManualPatch(selectedPath, dllName, fsr4Variant)
+            ? await runManualPatch(selectedPath, dllName, fsr4Variant, framegenBackend)
             : await runManualUnpatch(selectedPath);
         setOperationResult(response ?? { status: "error", message: "No response from backend." });
       } catch (err) {
@@ -179,7 +180,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
         setBusy(false);
       }
     },
-    [selectedPath, dllName, fsr4Variant]
+    [selectedPath, dllName, fsr4Variant, framegenBackend]
   );
 
   const handleToggle = (value: boolean) => {

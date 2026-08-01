@@ -4,12 +4,24 @@ import { toaster } from "@decky/api";
 import { listInstalledGames, getGameStatus, patchGame, unpatchGame } from "../api";
 import { FSR4_VARIANT_OPTIONS } from "../utils/constants";
 
-// ─── SteamClient helpers ─────────────────────────────────────────────────────
+type SteamAppsApi = {
+  RegisterForAppDetails?: (
+    appId: number,
+    callback: (details: { strLaunchOptions?: string }) => void
+  ) => { unregister: () => void };
+  SetAppLaunchOptions?: (appId: number, options: string) => void;
+};
+
+const getSteamApps = (): SteamAppsApi | undefined => {
+  if (typeof SteamClient === "undefined") return undefined;
+  return SteamClient.Apps as unknown as SteamAppsApi;
+};
 
 const getAppLaunchOptions = (appId: number): Promise<string> =>
   new Promise((resolve, reject) => {
-    if (typeof SteamClient === "undefined" || !SteamClient?.Apps?.RegisterForAppDetails) {
-      resolve("");
+    const apps = getSteamApps();
+    if (!apps || typeof apps.RegisterForAppDetails !== "function" || typeof apps.SetAppLaunchOptions !== "function") {
+      reject(new Error("Steam launch-options API is unavailable; patching was not started."));
       return;
     }
     let settled = false;
@@ -20,7 +32,7 @@ const getAppLaunchOptions = (appId: number): Promise<string> =>
       unregister();
       reject(new Error("Timed out reading launch options."));
     }, 5000);
-    const registration = SteamClient.Apps.RegisterForAppDetails(
+    const registration = apps.RegisterForAppDetails(
       appId,
       (details: { strLaunchOptions?: string }) => {
         if (settled) return;
@@ -31,15 +43,25 @@ const getAppLaunchOptions = (appId: number): Promise<string> =>
       }
     );
     unregister = registration.unregister;
+    if (settled) unregister();
   });
 
 const setAppLaunchOptions = (appId: number, options: string): void => {
-  if (typeof SteamClient !== "undefined" && SteamClient?.Apps?.SetAppLaunchOptions) {
-    SteamClient.Apps.SetAppLaunchOptions(appId, options);
+  const apps = getSteamApps();
+  if (!apps || typeof apps.SetAppLaunchOptions !== "function") {
+    throw new Error("Steam launch-options API is unavailable; launch options were not changed.");
   }
+  apps.SetAppLaunchOptions(appId, options);
 };
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+const canManageLaunchOptions = (): boolean => {
+  const apps = getSteamApps();
+  return Boolean(
+    apps &&
+    typeof apps.RegisterForAppDetails === "function" &&
+    typeof apps.SetAppLaunchOptions === "function"
+  );
+};
 
 type GameEntry = { appid: string; name: string; install_found?: boolean };
 
@@ -55,20 +77,19 @@ type GameStatus = {
   fsr4_variant?: string | null;
   fsr4_variant_label?: string | null;
   fsr4_upscaler_sha256?: string | null;
+  framegen_backend?: string | null;
+  framegen_backend_label?: string | null;
 };
 
-// ─── Module-level state persistence ──────────────────────────────────────────
-
 let lastSelectedAppId = "";
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 interface SteamGamePatcherProps {
   dllName: string;
   fsr4Variant: string;
+  framegenBackend: string;
 }
 
-export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps) {
+export function SteamGamePatcher({ dllName, fsr4Variant, framegenBackend }: SteamGamePatcherProps) {
   const [games, setGames] = useState<GameEntry[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
   const [selectedAppId, setSelectedAppId] = useState<string>(() => lastSelectedAppId);
@@ -76,8 +97,6 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
   const [statusLoading, setStatusLoading] = useState(false);
   const [busyAction, setBusyAction] = useState<"patch" | "unpatch" | null>(null);
   const [resultMessage, setResultMessage] = useState<string>("");
-
-  // ── Data loaders ───────────────────────────────────────────────────────────
 
   const loadGames = useCallback(async () => {
     setGamesLoading(true);
@@ -136,8 +155,6 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     void loadStatus(selectedAppId);
   }, [selectedAppId, loadStatus]);
 
-  // ── Derived state ──────────────────────────────────────────────────────────
-
   const selectedGame = useMemo(
     () => games.find((g) => g.appid === selectedAppId) ?? null,
     [games, selectedAppId]
@@ -163,20 +180,16 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     return `Patch with ${dllName}`;
   }, [busyAction, dllName, gameStatus, isPatchedWithDifferentDll, selectedGame]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-
   const handlePatch = useCallback(async () => {
     if (!selectedGame || !selectedAppId || busyAction) return;
     setBusyAction("patch");
     setResultMessage("");
     try {
-      let currentLaunchOptions = "";
-      try {
-        currentLaunchOptions = await getAppLaunchOptions(Number(selectedAppId));
-      } catch {
-        // non-fatal: proceed without current launch options
+      if (!canManageLaunchOptions()) {
+        throw new Error("Steam launch-options API is unavailable; patching was not started.");
       }
-      const result = await patchGame(selectedAppId, dllName, currentLaunchOptions, fsr4Variant);
+      const currentLaunchOptions = await getAppLaunchOptions(Number(selectedAppId));
+      const result = await patchGame(selectedAppId, dllName, currentLaunchOptions, fsr4Variant, framegenBackend);
       if (result.status !== "success") throw new Error(result.message || "Patch failed.");
       setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
       const msg = result.message || `Patched ${selectedGame.name}.`;
@@ -190,13 +203,16 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     } finally {
       setBusyAction(null);
     }
-  }, [busyAction, dllName, fsr4Variant, loadStatus, selectedAppId, selectedGame]);
+  }, [busyAction, dllName, framegenBackend, fsr4Variant, loadStatus, selectedAppId, selectedGame]);
 
   const handleUnpatch = useCallback(async () => {
     if (!selectedGame || !selectedAppId || busyAction) return;
     setBusyAction("unpatch");
     setResultMessage("");
     try {
+      if (!canManageLaunchOptions()) {
+        throw new Error("Steam launch-options API is unavailable; unpatching was not started.");
+      }
       const result = await unpatchGame(selectedAppId);
       if (result.status !== "success") throw new Error(result.message || "Unpatch failed.");
       setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
@@ -213,8 +229,6 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     }
   }, [busyAction, loadStatus, selectedAppId, selectedGame]);
 
-  // ── Status display ─────────────────────────────────────────────────────────
-
   const statusDisplay = useMemo(() => {
     if (!selectedGame) return { text: "—", color: undefined as string | undefined };
     if (statusLoading) return { text: "Loading...", color: undefined };
@@ -229,8 +243,6 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
   }, [gameStatus, isPatchedWithDifferentDll, selectedGame, statusLoading]);
 
   const focusableFieldProps = { focusable: true, highlightOnFocus: true } as const;
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -274,6 +286,14 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
               {gameStatus?.patched
                 ? (gameStatus?.fsr4_variant_label || "Unknown")
                 : `Will patch with ${selectedVariantLabel}`}
+            </Field>
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <Field {...focusableFieldProps} label="Frame generation backend">
+              {gameStatus?.patched
+                ? (gameStatus?.framegen_backend_label || gameStatus?.framegen_backend || "Unknown")
+                : `Will patch with ${framegenBackend}`}
             </Field>
           </PanelSectionRow>
 

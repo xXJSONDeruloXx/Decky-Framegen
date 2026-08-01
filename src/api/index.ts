@@ -1,7 +1,7 @@
 import { callable } from "@decky/api";
 
 export const runInstallFGMod = callable<
-  [selected_default_variant?: string],
+  [selected_default_variant?: string, framegen_backend?: string],
   {
     status: string;
     message?: string;
@@ -9,6 +9,8 @@ export const runInstallFGMod = callable<
     version?: string;
     selected_default_variant?: string;
     selected_default_variant_label?: string;
+    framegen_backend?: string;
+    framegen_backend_label?: string;
   }
 >("run_install_fgmod");
 
@@ -29,6 +31,17 @@ export const setDefaultFsr4Variant = callable<
   }
 >("set_default_fsr4_variant");
 
+export const setFramegenBackend = callable<
+  [framegen_backend?: string],
+  {
+    status: string;
+    message?: string;
+    output?: string;
+    framegen_backend?: string;
+    framegen_backend_label?: string;
+  }
+>("set_framegen_backend");
+
 export const checkFGModPath = callable<
   [],
   {
@@ -36,6 +49,8 @@ export const checkFGModPath = callable<
     version?: string | null;
     selected_fsr4_variant?: string | null;
     selected_fsr4_variant_label?: string | null;
+    framegen_backend?: string | null;
+    framegen_backend_label?: string | null;
     install_manifest_present?: boolean;
   }
 >("check_fgmod_path");
@@ -53,7 +68,7 @@ export const getPathDefaults = callable<
 >("get_path_defaults");
 
 export const runManualPatch = callable<
-  [string, string, string],
+  [string, string, string, string],
   {
     status: string;
     message?: string;
@@ -62,6 +77,7 @@ export const runManualPatch = callable<
     fsr4_variant_label?: string;
     fsr4_upscaler_sha256?: string;
     optiscaler_version?: string | null;
+    framegen_backend?: string;
   }
 >("manual_patch_directory");
 
@@ -86,11 +102,13 @@ export const getGameStatus = callable<
     fsr4_variant?: string | null;
     fsr4_variant_label?: string | null;
     fsr4_upscaler_sha256?: string | null;
+    framegen_backend?: string | null;
+    framegen_backend_label?: string | null;
   }
 >("get_game_status");
 
 export const patchGame = callable<
-  [appid: string, dll_name: string, current_launch_options: string, fsr4_variant: string],
+  [appid: string, dll_name: string, current_launch_options: string, fsr4_variant: string, framegen_backend: string],
   {
     status: string;
     message?: string;
@@ -104,6 +122,7 @@ export const patchGame = callable<
     fsr4_variant?: string;
     fsr4_variant_label?: string;
     fsr4_upscaler_sha256?: string;
+    framegen_backend?: string;
   }
 >("patch_game");
 

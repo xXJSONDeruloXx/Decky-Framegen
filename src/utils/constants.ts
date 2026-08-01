@@ -85,6 +85,22 @@ export const FSR4_VARIANT_OPTIONS = [
 export type Fsr4VariantValue = typeof FSR4_VARIANT_OPTIONS[number]["value"];
 export const DEFAULT_FSR4_VARIANT: Fsr4VariantValue = "rdna23-int8";
 
+export const FRAMEGEN_BACKEND_OPTIONS = [
+  {
+    value: "auto",
+    label: "OptiScaler automatic selection",
+    hint: "Let OptiScaler select the compatible frame-generation path.",
+  },
+  {
+    value: "nukems",
+    label: "Nukem's DLSSG → FSR3",
+    hint: "Use Nukem's DLSSG-to-FSR3 path for games that need it.",
+  },
+] as const;
+
+export type FramegenBackendValue = typeof FRAMEGEN_BACKEND_OPTIONS[number]["value"];
+export const DEFAULT_FRAMEGEN_BACKEND: FramegenBackendValue = "auto";
+
 // Common timeout values
 export const TIMEOUTS = {
   resultDisplay: 5000,  // 5 seconds

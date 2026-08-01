@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 import { DropdownItem, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
-import { runInstallFGMod, runUninstallFGMod, setDefaultFsr4Variant } from "../api";
-import { OperationResult } from "./ResultDisplay";
+import { runInstallFGMod, runUninstallFGMod, setDefaultFsr4Variant, setFramegenBackend } from "../api";
+import { ResultDisplay, type OperationResult } from "./ResultDisplay";
 import { createAutoCleanupTimer } from "../utils";
-import { TIMEOUTS, PROXY_DLL_OPTIONS, DEFAULT_PROXY_DLL, FSR4_VARIANT_OPTIONS, DEFAULT_FSR4_VARIANT } from "../utils/constants";
+import {
+  TIMEOUTS,
+  PROXY_DLL_OPTIONS,
+  DEFAULT_PROXY_DLL,
+  FSR4_VARIANT_OPTIONS,
+  DEFAULT_FSR4_VARIANT,
+  FRAMEGEN_BACKEND_OPTIONS,
+  DEFAULT_FRAMEGEN_BACKEND,
+} from "../utils/constants";
 import { InstallationStatus } from "./InstallationStatus";
 import { OptiScalerHeader } from "./OptiScalerHeader";
 import { ClipboardCommands } from "./ClipboardCommands";
@@ -18,6 +26,8 @@ interface FgmodInfo {
   version?: string | null;
   selected_fsr4_variant?: string | null;
   selected_fsr4_variant_label?: string | null;
+  framegen_backend?: string | null;
+  framegen_backend_label?: string | null;
   install_manifest_present?: boolean;
 }
 
@@ -37,19 +47,22 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
   const [dllName, setDllName] = useState<string>(DEFAULT_PROXY_DLL);
   const [fsr4Variant, setFsr4Variant] = useState<string>(DEFAULT_FSR4_VARIANT);
   const [fsr4VariantTouched, setFsr4VariantTouched] = useState(false);
+  const [framegenBackend, setFramegenBackendValue] = useState<string>(DEFAULT_FRAMEGEN_BACKEND);
+  const [framegenBackendTouched, setFramegenBackendTouched] = useState(false);
   const [switchingVariant, setSwitchingVariant] = useState(false);
+  const [switchingBackend, setSwitchingBackend] = useState(false);
   useEffect(() => {
     if (installResult) {
       return createAutoCleanupTimer(() => setInstallResult(null), TIMEOUTS.resultDisplay);
     }
-    return () => {}; // Ensure a cleanup function is always returned
+    return undefined;
   }, [installResult]);
 
   useEffect(() => {
     if (uninstallResult) {
       return createAutoCleanupTimer(() => setUninstallResult(null), TIMEOUTS.resultDisplay);
     }
-    return () => {}; // Ensure a cleanup function is always returned
+    return undefined;
   }, [uninstallResult]);
 
   useEffect(() => {
@@ -59,16 +72,26 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
     }
   }, [fgmodInfo?.selected_fsr4_variant, fsr4VariantTouched]);
 
+  useEffect(() => {
+    const installedBackend = fgmodInfo?.framegen_backend;
+    if (!framegenBackendTouched && installedBackend && FRAMEGEN_BACKEND_OPTIONS.some((option) => option.value === installedBackend)) {
+      setFramegenBackendValue(installedBackend);
+    }
+  }, [fgmodInfo?.framegen_backend, framegenBackendTouched]);
+
   const handleInstallClick = async () => {
     try {
       setInstalling(true);
-      const result = await runInstallFGMod(fsr4Variant);
+      const result = await runInstallFGMod(fsr4Variant, framegenBackend);
       setInstallResult(result);
       if (result.status === "success") {
         setPathExists(true);
+        setFsr4VariantTouched(false);
+        setFramegenBackendTouched(false);
       }
     } catch (e) {
       console.error(e);
+      setInstallResult({ status: "error", message: e instanceof Error ? e.message : "Installation failed." });
     } finally {
       setInstalling(false);
     }
@@ -84,8 +107,32 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
       }
     } catch (e) {
       console.error(e);
+      setUninstallResult({ status: "error", message: e instanceof Error ? e.message : "Uninstall failed." });
     } finally {
       setUninstalling(false);
+    }
+  };
+
+  const handleFramegenBackendChange = async (nextBackend: string) => {
+    const previousBackend = framegenBackend;
+    setFramegenBackendValue(nextBackend);
+    setFramegenBackendTouched(true);
+    if (pathExists !== true) return;
+
+    try {
+      setSwitchingBackend(true);
+      const result = await setFramegenBackend(nextBackend);
+      if (result.status !== "success") {
+        throw new Error(result.message || result.output || "Failed to update the frame-generation backend.");
+      }
+      setFramegenBackendValue(result.framegen_backend || nextBackend);
+      setFramegenBackendTouched(false);
+    } catch (error) {
+      console.error(error);
+      setFramegenBackendValue(previousBackend);
+      setFramegenBackendTouched(false);
+    } finally {
+      setSwitchingBackend(false);
     }
   };
 
@@ -132,9 +179,24 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
           menuLabel="Default FSR4 runtime"
           selectedOption={fsr4Variant}
           rgOptions={FSR4_VARIANT_OPTIONS.map((option) => ({ data: option.value, label: option.label }))}
-          disabled={installing || uninstalling || switchingVariant}
+          disabled={installing || uninstalling || switchingVariant || switchingBackend}
           onChange={(option) => {
             void handleFsr4VariantChange(String(option.data));
+          }}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <DropdownItem
+          layout="below"
+          label="Frame generation backend"
+          description={FRAMEGEN_BACKEND_OPTIONS.find((option) => option.value === framegenBackend)?.hint}
+          menuLabel="Frame generation backend"
+          selectedOption={framegenBackend}
+          rgOptions={FRAMEGEN_BACKEND_OPTIONS.map((option) => ({ data: option.value, label: option.label }))}
+          disabled={installing || uninstalling || switchingBackend}
+          onChange={(option) => {
+            void handleFramegenBackendChange(String(option.data));
           }}
         />
       </PanelSectionRow>
@@ -162,7 +224,7 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
       )}
 
       {pathExists === true && (
-        <SteamGamePatcher dllName={dllName} fsr4Variant={fsr4Variant} />
+        <SteamGamePatcher dllName={dllName} fsr4Variant={fsr4Variant} framegenBackend={framegenBackend} />
       )}
 
       <ClipboardCommands pathExists={pathExists} dllName={dllName} />
@@ -192,7 +254,11 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
         onManualModeChange={setAdvancedModeEnabled}
         dllName={dllName}
         fsr4Variant={fsr4Variant}
+        framegenBackend={framegenBackend}
       />
+
+      <ResultDisplay result={installResult} />
+      <ResultDisplay result={uninstallResult} />
 
       {!advancedModeEnabled && (
         <InstructionCard pathExists={pathExists} />
