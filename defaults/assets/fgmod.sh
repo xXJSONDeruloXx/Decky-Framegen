@@ -305,7 +305,11 @@ fi
 
 # === OptiScaler env variables Handling ===
 if [[ -f "$fgmod_path/update-optiscaler-config.py" ]]; then
-  python "$fgmod_path/update-optiscaler-config.py" "$exe_folder_path/OptiScaler.ini"
+  if [[ -n "$python_bin" ]]; then
+    "$python_bin" "$fgmod_path/update-optiscaler-config.py" "$exe_folder_path/OptiScaler.ini"
+  else
+    echo " Python is unavailable; skipping OptiScaler config migration"
+  fi
 fi
 
 # OptiScaler 0.9.0-pre11 can assert on Proton when HQ font auto mode tries to load

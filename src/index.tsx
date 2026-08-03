@@ -2,7 +2,6 @@ import { definePlugin } from "@decky/api";
 import { MdOutlineAutoAwesomeMotion } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { OptiScalerControls } from "./components";
-// import { InstalledGamesSection } from "./components/InstalledGamesSection";
 import { checkFGModPath } from "./api";
 import { safeAsyncOperation } from "./utils";
 import { TIMEOUTS } from "./utils/constants";
@@ -12,6 +11,8 @@ type FgmodInfo = {
   version?: string | null;
   selected_fsr4_variant?: string | null;
   selected_fsr4_variant_label?: string | null;
+  framegen_backend?: string | null;
+  framegen_backend_label?: string | null;
   install_manifest_present?: boolean;
 };
 
@@ -43,11 +44,6 @@ function MainContent() {
         setPathExists={setPathExists}
         fgmodInfo={fgmodInfo}
       />
-      {pathExists === true ? (
-        <>
-          {/* <InstalledGamesSection /> */}
-        </>
-      ) : null}
     </>
   );
 }
