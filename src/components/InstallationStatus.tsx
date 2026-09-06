@@ -5,9 +5,28 @@ interface InstallationStatusProps {
   pathExists: boolean | null;
   installing: boolean;
   onInstallClick: () => void;
+  /** ~/fgmod was prepared by an older plugin build and lacks the current injector. */
+  bundleOutdated?: boolean;
 }
 
-export function InstallationStatus({ pathExists, installing, onInstallClick }: InstallationStatusProps) {
+export function InstallationStatus({ pathExists, installing, onInstallClick, bundleOutdated = false }: InstallationStatusProps) {
+  if (pathExists === true && bundleOutdated) {
+    return (
+      <>
+        <PanelSectionRow>
+          <div style={STYLES.statusNotInstalled}>
+            {MESSAGES.bundleOutdated}
+          </div>
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={onInstallClick} disabled={installing}>
+            {installing ? MESSAGES.installing : MESSAGES.updateBundleButton}
+          </ButtonItem>
+        </PanelSectionRow>
+      </>
+    );
+  }
+
   if (pathExists !== false) return null;
 
   return (
@@ -17,7 +36,7 @@ export function InstallationStatus({ pathExists, installing, onInstallClick }: I
           {MESSAGES.modNotInstalled}
         </div>
       </PanelSectionRow>
-      
+
       <PanelSectionRow>
         <ButtonItem layout="below" onClick={onInstallClick} disabled={installing}>
           {installing ? MESSAGES.installing : MESSAGES.installButton}

@@ -1,0 +1,40 @@
+# Rebuilds the installable Decky zip from source. Manual trigger only, so it never
+# races a hand-made release. Download the artifact from the run page afterwards.
+name: build-zip
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Build frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Run backend tests (needs 7z or bsdtar; ubuntu has both)
+        run: |
+          python3 scripts/fetch-bin.py
+          python3 -m unittest discover -s tests -t tests -v
+
+      - name: Package
+        run: scripts/package.sh "$GITHUB_WORKSPACE/out"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decky-framegen-zip
+          path: out/*.zip
+          if-no-files-found: error

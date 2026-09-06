@@ -5,12 +5,12 @@ exec > >(tee -i /tmp/fgmod-uninstaller.log) 2>&1
 
 error_exit() {
   echo " $1"
-  if [[ -n $STEAM_ZENITY ]]; then
-    $STEAM_ZENITY --error --text "$1"
-  else 
-    zenity --error --text "$1" || echo "Zenity failed to display error"
-  fi
   logger -t fgmod-uninstaller "ERROR: $1"
+  if [[ -n $STEAM_ZENITY ]]; then
+    "$STEAM_ZENITY" --error --text "$1" --timeout=20 || true
+  else
+    zenity --error --text "$1" --timeout=20 || echo "Zenity failed to display error"
+  fi
   exit 1
 }
 
@@ -85,7 +85,11 @@ done
 # Check for Unreal Engine game paths
 if [[ -d "$exe_folder_path/Engine" ]]; then
   ue_exe_path=$(find "$exe_folder_path" -maxdepth 4 -mindepth 4 -path "*Binaries/Win64/*.exe" -not -path "*/Engine/*" | head -1)
-  exe_folder_path=$(dirname "$ue_exe_path")
+  if [[ -n "$ue_exe_path" ]]; then
+    exe_folder_path=$(dirname "$ue_exe_path")
+  else
+    logger -t fgmod-uninstaller "Engine/ found but no Binaries/Win64 exe at depth 4; keeping $exe_folder_path"
+  fi
 fi
 
 # Verify the game folder exists
@@ -138,8 +142,13 @@ rm -f "fakenvapi.dll" "fakenvapi.ini"  # v0.9.0-final
 rm -f "nvapi64.dll" "nvapi64.dll.b"    # Legacy cleanup for older versions and backups
 
 # === Remove ASI Plugins ===
-echo " Removing ASI plugins directory..."
-rm -rf "plugins"
+# Only the plugin the bundle installs; keep third-party ASI mods the user put there.
+echo " Removing OptiPatcher ASI plugin..."
+rm -f "plugins/OptiPatcher.asi"
+rmdir "plugins" 2>/dev/null || true
+
+# The Decky plugin's FRAMEGEN_PATCH marker is left in place on purpose: it stores
+# the user's original Steam launch options, which only the plugin can hand back.
 
 # === Remove D3D12_Optiscaler directory (required by v0.9.0-final) ===
 rm -rf "D3D12_Optiscaler"
@@ -172,7 +181,8 @@ logger -t fgmod-uninstaller "fgmod removed from $exe_folder_path"
 if [[ $# -gt 1 ]]; then
   echo " Launching the game..."
   export SteamDeck=0
-  export WINEDLLOVERRIDES="${WINEDLLOVERRIDES},dxgi=n,b"
+  # ';' is Wine's entry separator; ',' would merge our entry into an existing one.
+  export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:+$WINEDLLOVERRIDES;}dxgi=n,b"
   exec >/dev/null 2>&1
   exec "$@"
 else

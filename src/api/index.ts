@@ -37,8 +37,16 @@ export const checkFGModPath = callable<
     selected_fsr4_variant?: string | null;
     selected_fsr4_variant_label?: string | null;
     install_manifest_present?: boolean;
+    bundle_outdated?: boolean;
+    outdated_variants?: string[];
+    fsr4_watermark?: boolean;
   }
 >("check_fgmod_path");
+
+export const setFsr4Watermark = callable<
+  [enabled: boolean],
+  { status: string; message?: string; fsr4_watermark?: boolean }
+>("set_fsr4_watermark");
 
 export const listInstalledGames = callable<
   [],
@@ -86,11 +94,20 @@ export const getGameStatus = callable<
     fsr4_variant?: string | null;
     fsr4_variant_label?: string | null;
     fsr4_upscaler_sha256?: string | null;
+    injector_outdated?: boolean;
+    game_options?: { dx12_upscaler?: string; frame_generation?: string };
+    ini_dx12_upscaler?: string | null;
+    ini_fg_input?: string | null;
   }
 >("get_game_status");
 
+export const getGameDiagnostics = callable<
+  [appid: string],
+  { status: string; message?: string; report?: string; path?: string }
+>("get_game_diagnostics");
+
 export const patchGame = callable<
-  [appid: string, dll_name: string, current_launch_options: string, fsr4_variant: string],
+  [appid: string, dll_name: string, current_launch_options: string, fsr4_variant: string, dx12_upscaler: string, frame_generation: string],
   {
     status: string;
     message?: string;

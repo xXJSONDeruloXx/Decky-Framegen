@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ButtonItem, DropdownItem, Field, PanelSectionRow } from "@decky/ui";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ButtonItem, DropdownItem, Field, PanelSectionRow, useQuickAccessVisible } from "@decky/ui";
 import { toaster } from "@decky/api";
-import { listInstalledGames, getGameStatus, patchGame, unpatchGame } from "../api";
-import { FSR4_VARIANT_OPTIONS } from "../utils/constants";
+import { listInstalledGames, getGameStatus, getGameDiagnostics, patchGame, unpatchGame } from "../api";
+import { FSR4_VARIANT_OPTIONS, DX12_UPSCALER_OPTIONS, FRAME_GENERATION_OPTIONS } from "../utils/constants";
+import { copyTextToClipboard } from "../utils";
 
 // ─── SteamClient helpers ─────────────────────────────────────────────────────
 
@@ -55,6 +56,10 @@ type GameStatus = {
   fsr4_variant?: string | null;
   fsr4_variant_label?: string | null;
   fsr4_upscaler_sha256?: string | null;
+  injector_outdated?: boolean;
+  game_options?: { dx12_upscaler?: string; frame_generation?: string };
+  ini_dx12_upscaler?: string | null;
+  ini_fg_input?: string | null;
 };
 
 // ─── Module-level state persistence ──────────────────────────────────────────
@@ -74,17 +79,30 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
   const [selectedAppId, setSelectedAppId] = useState<string>(() => lastSelectedAppId);
   const [gameStatus, setGameStatus] = useState<GameStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
-  const [busyAction, setBusyAction] = useState<"patch" | "unpatch" | null>(null);
+  const [busyAction, setBusyAction] = useState<"patch" | "unpatch" | "diagnostics" | null>(null);
   const [resultMessage, setResultMessage] = useState<string>("");
+  // Per-game choices. They follow the global default / the patched game's marker
+  // until the user touches them for the selected game.
+  const [gameVariant, setGameVariant] = useState<string>(fsr4Variant);
+  const [upscalerChoice, setUpscalerChoice] = useState<string>("auto");
+  const [fgChoice, setFgChoice] = useState<string>("default");
+  const touchedAppId = useRef<string>("");
 
   // ── Data loaders ───────────────────────────────────────────────────────────
 
-  const loadGames = useCallback(async () => {
-    setGamesLoading(true);
+  const gamesLoadedOnce = useRef(false);
+  const qamVisible = useQuickAccessVisible();
+
+  // `silent` refreshes keep the current list on screen (no "Loading games..."
+  // flash) and never toast: they run every time the Quick Access Menu opens so
+  // games installed or removed since the plugin mounted show up.
+  const loadGames = useCallback(async (silent = false) => {
+    if (!silent) setGamesLoading(true);
     try {
       const result = await listInstalledGames();
       if (result.status !== "success") throw new Error(result.message || "Failed to load games.");
       const gameList = result.games as GameEntry[];
+      gamesLoadedOnce.current = true;
       setGames(gameList);
       if (!gameList.length) {
         lastSelectedAppId = "";
@@ -99,9 +117,13 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load games.";
+      if (silent) {
+        console.warn("[Framegen] silent game-list refresh failed:", msg);
+        return;
+      }
       toaster.toast({ title: "Decky Framegen", body: msg });
     } finally {
-      setGamesLoading(false);
+      if (!silent) setGamesLoading(false);
     }
   }, []);
 
@@ -125,8 +147,9 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
   }, []);
 
   useEffect(() => {
-    void loadGames();
-  }, [loadGames]);
+    if (!qamVisible) return;
+    void loadGames(gamesLoadedOnce.current);
+  }, [qamVisible, loadGames]);
 
   useEffect(() => {
     if (!selectedAppId) {
@@ -136,6 +159,26 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     void loadStatus(selectedAppId);
   }, [selectedAppId, loadStatus]);
 
+  // Initialise the per-game controls from the marker (patched game) or the global
+  // default (unpatched game) whenever the selection or the status changes, unless
+  // the user already changed them for this very game.
+  useEffect(() => {
+    if (touchedAppId.current === selectedAppId) return;
+    if (gameStatus?.patched) {
+      setGameVariant(gameStatus.fsr4_variant || fsr4Variant);
+      setUpscalerChoice(gameStatus.game_options?.dx12_upscaler || "auto");
+      setFgChoice(gameStatus.game_options?.frame_generation || "default");
+    } else {
+      setGameVariant(fsr4Variant);
+      setUpscalerChoice("auto");
+      setFgChoice("default");
+    }
+  }, [selectedAppId, gameStatus, fsr4Variant]);
+
+  const markTouched = () => {
+    touchedAppId.current = selectedAppId;
+  };
+
   // ── Derived state ──────────────────────────────────────────────────────────
 
   const selectedGame = useMemo(
@@ -144,12 +187,23 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
   );
 
   const selectedVariantLabel = useMemo(
-    () => FSR4_VARIANT_OPTIONS.find((option) => option.value === fsr4Variant)?.label ?? fsr4Variant,
-    [fsr4Variant]
+    () => FSR4_VARIANT_OPTIONS.find((option) => option.value === gameVariant)?.label ?? gameVariant,
+    [gameVariant]
   );
 
   const isPatchedWithDifferentDll =
     gameStatus?.patched && gameStatus?.dll_name && gameStatus.dll_name !== dllName;
+
+  // The game keeps the runtime it was patched with; pressing Reinstall re-patches
+  // it with the currently selected default.
+  const isPatchedWithDifferentVariant = Boolean(
+    gameStatus?.patched && gameStatus?.fsr4_variant && gameStatus.fsr4_variant !== gameVariant
+  );
+  const optionsChanged = Boolean(
+    gameStatus?.patched &&
+      ((gameStatus.game_options?.dx12_upscaler || "auto") !== upscalerChoice ||
+        (gameStatus.game_options?.frame_generation || "default") !== fgChoice)
+  );
 
   const canPatch = Boolean(selectedGame && gameStatus?.install_found && !busyAction);
   const canUnpatch = Boolean(selectedGame && gameStatus?.patched && !busyAction);
@@ -159,9 +213,9 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     if (!selectedGame) return "Patch this game";
     if (!gameStatus?.install_found) return "Install not found";
     if (isPatchedWithDifferentDll) return `Switch to ${dllName}`;
-    if (gameStatus?.patched) return `Reinstall (${dllName})`;
+    if (gameStatus?.patched) return (isPatchedWithDifferentVariant || optionsChanged) ? `Reinstall (${dllName}) — apply changes` : `Reinstall (${dllName})`;
     return `Patch with ${dllName}`;
-  }, [busyAction, dllName, gameStatus, isPatchedWithDifferentDll, selectedGame]);
+  }, [busyAction, dllName, gameStatus, isPatchedWithDifferentDll, isPatchedWithDifferentVariant, optionsChanged, selectedGame]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -174,9 +228,12 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
       try {
         currentLaunchOptions = await getAppLaunchOptions(Number(selectedAppId));
       } catch {
-        // non-fatal: proceed without current launch options
+        // Patching with "" would record an empty original and a later unpatch
+        // would wipe the user's own launch options, so stop here instead.
+        throw new Error("Could not read this game's current launch options from Steam. Please try again.");
       }
-      const result = await patchGame(selectedAppId, dllName, currentLaunchOptions, fsr4Variant);
+      const result = await patchGame(selectedAppId, dllName, currentLaunchOptions, gameVariant, upscalerChoice, fgChoice);
+      touchedAppId.current = "";
       if (result.status !== "success") throw new Error(result.message || "Patch failed.");
       setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
       const msg = result.message || `Patched ${selectedGame.name}.`;
@@ -190,7 +247,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     } finally {
       setBusyAction(null);
     }
-  }, [busyAction, dllName, fsr4Variant, loadStatus, selectedAppId, selectedGame]);
+  }, [busyAction, dllName, gameVariant, upscalerChoice, fgChoice, loadStatus, selectedAppId, selectedGame]);
 
   const handleUnpatch = useCallback(async () => {
     if (!selectedGame || !selectedAppId || busyAction) return;
@@ -213,6 +270,25 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     }
   }, [busyAction, loadStatus, selectedAppId, selectedGame]);
 
+  const handleDiagnostics = useCallback(async () => {
+    if (!selectedAppId || busyAction) return;
+    setBusyAction("diagnostics");
+    try {
+      const result = await getGameDiagnostics(selectedAppId);
+      if (result.status !== "success" || !result.report) throw new Error(result.message || "Could not collect diagnostics.");
+      const copied = await copyTextToClipboard(result.report);
+      const where = result.path ? ` Also saved to ${result.path}.` : "";
+      toaster.toast({
+        title: "Decky Framegen",
+        body: copied ? `Diagnostics copied to the clipboard.${where}` : `Clipboard unavailable.${where}`,
+      });
+    } catch (err) {
+      toaster.toast({ title: "Decky Framegen", body: err instanceof Error ? err.message : "Could not collect diagnostics." });
+    } finally {
+      setBusyAction(null);
+    }
+  }, [busyAction, selectedAppId]);
+
   // ── Status display ─────────────────────────────────────────────────────────
 
   const statusDisplay = useMemo(() => {
@@ -223,6 +299,8 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     if (!gameStatus.install_found) return { text: "Install not found", color: "#ffd866" };
     if (!gameStatus.patched) return { text: "Not patched", color: undefined };
     const dllLabel = gameStatus.dll_name || "unknown";
+    if (gameStatus.injector_outdated)
+      return { text: `Patched (${dllLabel}) — old injector, press Reinstall`, color: "#ffd866" };
     if (isPatchedWithDifferentDll)
       return { text: `Patched (${dllLabel}) — switch available`, color: "#ffd866" };
     return { text: `Patched (${dllLabel})`, color: "#3fb950" };
@@ -239,7 +317,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
           layout="below"
           label="Steam game"
           menuLabel="Select a Steam game"
-          strDefaultLabel={gamesLoading ? "Loading games..." : "Choose a game"}
+          strDefaultLabel={gamesLoading ? "Loading games..." : games.length === 0 ? "No Steam games found" : "Choose a game"}
           disabled={gamesLoading || games.length === 0}
           selectedOption={selectedAppId}
           rgOptions={games.map((g) => ({
@@ -270,11 +348,67 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
           </PanelSectionRow>
 
           <PanelSectionRow>
-            <Field {...focusableFieldProps} label="FSR4 runtime">
-              {gameStatus?.patched
-                ? (gameStatus?.fsr4_variant_label || "Unknown")
-                : `Will patch with ${selectedVariantLabel}`}
-            </Field>
+            <DropdownItem
+              layout="below"
+              label="Runtime for this game"
+              description={
+                gameStatus?.patched
+                  ? isPatchedWithDifferentVariant
+                    ? `Currently ${gameStatus?.fsr4_variant_label || "unknown"}. Press Reinstall to switch.`
+                    : `Currently ${gameStatus?.fsr4_variant_label || "unknown"}.`
+                  : `Will patch with ${selectedVariantLabel}.`
+              }
+              menuLabel="Runtime for this game"
+              selectedOption={gameVariant}
+              rgOptions={FSR4_VARIANT_OPTIONS.map((option) => ({ data: option.value, label: option.label }))}
+              disabled={busyAction !== null}
+              onChange={(option) => {
+                markTouched();
+                setGameVariant(String(option.data));
+              }}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <DropdownItem
+              layout="below"
+              label="DX12 upscaler"
+              description={
+                gameStatus?.patched && gameStatus.ini_dx12_upscaler
+                  ? `INI currently: ${gameStatus.ini_dx12_upscaler}${optionsChanged ? " — press Reinstall to apply" : ""}`
+                  : "Written to OptiScaler.ini when you Patch/Reinstall. 'Runtime default' keeps FSR 3.1 → FSR 4 unless you chose something in the overlay."
+              }
+              menuLabel="DX12 upscaler"
+              selectedOption={upscalerChoice}
+              rgOptions={DX12_UPSCALER_OPTIONS.map((option) => ({ data: option.value, label: option.label }))}
+              disabled={busyAction !== null}
+              onChange={(option) => {
+                markTouched();
+                setUpscalerChoice(String(option.data));
+              }}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <DropdownItem
+              layout="below"
+              label="Frame generation"
+              description={
+                fgChoice === "optifg"
+                  ? "OptiScaler generates frames from the upscaler. Game dependent; UI can glitch. Enable it in the Insert overlay if it stays off."
+                  : gameStatus?.patched && gameStatus.ini_fg_input
+                    ? `INI currently: FGInput=${gameStatus.ini_fg_input}${optionsChanged ? " — press Reinstall to apply" : ""}`
+                    : "Uses the game's own DLSS Frame Generation toggle through Nukem's mod."
+              }
+              menuLabel="Frame generation"
+              selectedOption={fgChoice}
+              rgOptions={FRAME_GENERATION_OPTIONS.map((option) => ({ data: option.value, label: option.label }))}
+              disabled={busyAction !== null}
+              onChange={(option) => {
+                markTouched();
+                setFgChoice(String(option.data));
+              }}
+            />
           </PanelSectionRow>
 
           <PanelSectionRow>
@@ -302,6 +436,17 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
               onClick={() => void loadStatus(selectedAppId)}
             >
               {statusLoading ? "Refreshing..." : "Refresh status"}
+            </ButtonItem>
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              disabled={!selectedAppId || busyAction !== null}
+              onClick={handleDiagnostics}
+              description="Copies bundle state, marker, INI keys and the telling OptiScaler.log lines to the clipboard."
+            >
+              {busyAction === "diagnostics" ? "Collecting..." : "Copy diagnostics"}
             </ButtonItem>
           </PanelSectionRow>
 

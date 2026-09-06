@@ -5,12 +5,14 @@ exec > >(tee -i /tmp/fgmod-install.log) 2>&1
 
 error_exit() {
   echo " $1"
-  if [[ -n $STEAM_ZENITY ]]; then
-    $STEAM_ZENITY --error --text "$1"
-  else 
-    zenity --error --text "$1" || echo "Zenity failed to display error"
-  fi
+  # Log first: in Gaming Mode a dialog may never be visible, so it must not be the
+  # only record, and it must not block the launch forever (--timeout).
   logger -t fgmod "ERROR: $1"
+  if [[ -n $STEAM_ZENITY ]]; then
+    "$STEAM_ZENITY" --error --text "$1" --timeout=20 || true
+  else
+    zenity --error --text "$1" --timeout=20 || echo "Zenity failed to display error"
+  fi
   exit 1
 }
 
@@ -88,7 +90,12 @@ done
 
 if [[ -d "$exe_folder_path/Engine" ]]; then
   ue_exe=$(find "$exe_folder_path" -maxdepth 4 -mindepth 4 -path "*Binaries/Win64/*.exe" -not -path "*/Engine/*" | head -1)
-  exe_folder_path=$(dirname "$ue_exe")
+  if [[ -n "$ue_exe" ]]; then
+    exe_folder_path=$(dirname "$ue_exe")
+  else
+    # dirname "" would be "." (the current working directory), never patch that.
+    logger -t fgmod "Engine/ found but no Binaries/Win64 exe at depth 4; keeping $exe_folder_path"
+  fi
 fi
 
 [[ ! -d "$exe_folder_path" ]] && error_exit " Could not resolve game directory!"
@@ -125,10 +132,39 @@ cleanup_files=(
   "dlssg_to_fsr3_amd_is_better-3.0.dll"
 )
 
+# Injectors shipped by earlier plugin builds (sha256). Such a proxy DLL is ours even
+# though nothing in the current ~/fgmod matches it byte-for-byte.
+previous_injector_sha256s=(
+  "b374b19081cc066365d0c6da4808d768e16469b0cbdfc478b6e95999947d5364"  # 0.10.0-pre1 20260622 (v0.16-v0.17 Valve RDNA2)
+)
+
+file_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  else
+    shasum -a 256 "$1" | cut -d' ' -f1
+  fi
+}
+
 is_bundled_proxy_copy() {
   local existing_file="$1"
-  local bundled_copy="$fgmod_path/renames/$(basename "$existing_file")"
-  [[ -f "$existing_file" && -f "$bundled_copy" ]] && cmp -s "$existing_file" "$bundled_copy"
+  local name
+  name="$(basename "$existing_file")"
+  [[ -f "$existing_file" ]] || return 1
+  local candidate
+  for candidate in \
+    "$fgmod_path/renames/$name" \
+    "$fgmod_path/OptiScaler.dll" \
+    "$fgmod_path/fsr4-rdna2-valve-411-pre10/renames/$name" \
+    "$fgmod_path/fsr4-rdna2-valve-411-pre10/OptiScaler.dll"; do
+    [[ -f "$candidate" ]] && cmp -s "$existing_file" "$candidate" && return 0
+  done
+  local sum known
+  sum="$(file_sha256 "$existing_file" 2>/dev/null)"
+  for known in "${previous_injector_sha256s[@]}"; do
+    [[ -n "$sum" && "$sum" == "$known" ]] && return 0
+  done
+  return 1
 }
 
 has_patch_fingerprint() {
@@ -189,6 +225,16 @@ case "$selected_fsr4_variant" in
     variant_extra_files+=("amdxcffx64.dll" "amdxc64.dll")
     variant_ini_overrides+=("FSR.Fsr4ForceModel=2")
     variant_ini_overrides+=("Plugins.LoadCustomAmdxc64OnRdna2=true")
+    # "?=" = only while the key is still auto (a value saved from the overlay wins)
+    variant_ini_overrides+=("Upscalers.Dx12Upscaler?=ffx")
+    ;;
+  rdna2-valve-411-094)
+    # Valve driver DLLs with the 0.9.4 injector (classic overlay input path).
+    variant_dir="$fgmod_path/fsr4-rdna2-valve-411-094"
+    fsr4_upscaler_src="$variant_dir/amd_fidelityfx_upscaler_dx12.dll"
+    variant_extra_files+=("amdxcffx64.dll" "amdxc64.dll")
+    variant_ini_overrides+=("FSR.Fsr4ForceEnableInt8=true")
+    variant_ini_overrides+=("Upscalers.Dx12Upscaler?=fsr31")
     ;;
   *)
     selected_fsr4_variant="rdna23-int8"
@@ -198,6 +244,21 @@ case "$selected_fsr4_variant" in
 esac
 [[ -f "$fsr4_upscaler_src" ]] || fsr4_upscaler_src="$fgmod_path/amd_fidelityfx_upscaler_dx12.dll"
 logger -t fgmod "Using FSR4 variant: $selected_fsr4_variant (source: $fsr4_upscaler_src)"
+
+# FSR 4 watermark preference stored by the plugin in the install manifest.
+if [[ -f "$fgmod_path/install-manifest.json" && -n "$python_bin" ]]; then
+  if "$python_bin" - "$fgmod_path/install-manifest.json" <<'PY' 2>/dev/null
+import json, sys
+from pathlib import Path
+try:
+    sys.exit(0 if json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("fsr4_watermark") else 1)
+except Exception:
+    sys.exit(1)
+PY
+  then
+    variant_ini_overrides+=("FSR.Fsr4EnableWatermark=true")
+  fi
+fi
 
 is_managed_support_file() {
   local existing_file="$1"
@@ -210,7 +271,8 @@ is_managed_support_file() {
       "$fgmod_path/fsr4-rdna2-3/amd_fidelityfx_upscaler_dx12.dll" \
       "$fgmod_path/fsr4-rdna4/amd_fidelityfx_upscaler_dx12.dll" \
       "$fgmod_path/fsr4-rdna3-4-official-411/amd_fidelityfx_upscaler_dx12.dll" \
-      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amd_fidelityfx_upscaler_dx12.dll"; do
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amd_fidelityfx_upscaler_dx12.dll" \
+      "$fgmod_path/fsr4-rdna2-valve-411-094/amd_fidelityfx_upscaler_dx12.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
@@ -219,14 +281,16 @@ is_managed_support_file() {
     for candidate in \
       "$fgmod_path/amdxcffx64.dll" \
       "$fgmod_path/fsr4-rdna3-4-official-411/amdxcffx64.dll" \
-      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amdxcffx64.dll"; do
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amdxcffx64.dll" \
+      "$fgmod_path/fsr4-rdna2-valve-411-094/amdxcffx64.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
   fi
   if [[ "$filename" == "amdxc64.dll" ]]; then
     for candidate in \
-      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amdxc64.dll"; do
+      "$fgmod_path/fsr4-rdna2-valve-411-pre10/amdxc64.dll" \
+      "$fgmod_path/fsr4-rdna2-valve-411-094/amdxc64.dll"; do
       [[ -f "$candidate" && -f "$existing_file" ]] && cmp -s "$existing_file" "$candidate" && return 0
     done
     return 1
@@ -240,7 +304,10 @@ for dll in "${proxy_backup_files[@]}"; do
   existing_path="$exe_folder_path/$dll"
   backup_path="$exe_folder_path/$dll.b"
   if [[ -f "$existing_path" && ! -f "$backup_path" ]]; then
-    if has_patch_fingerprint || is_bundled_proxy_copy "$existing_path"; then
+    # Only our own injector copies and the proxy name we manage are skipped; any
+    # other proxy DLL (a version.dll mod loader, ReShade's dxgi.dll, ...) is backed
+    # up even when the folder is already patched, so a relaunch cannot delete it.
+    if is_bundled_proxy_copy "$existing_path" || { has_patch_fingerprint && [[ "$dll" == "$dll_name" ]]; }; then
       logger -t fgmod "Skipping backup for managed/stale proxy copy: $dll"
     else
       mv -f "$existing_path" "$backup_path"
@@ -253,12 +320,26 @@ unset existing_path backup_path fingerprint
 
 # === Cleanup Old Injectors / Legacy OptiScaler Artifacts ===
 for cleanup_file in "${cleanup_files[@]}"; do
-  rm -f "$exe_folder_path/$cleanup_file"
+  existing_path="$exe_folder_path/$cleanup_file"
+  [[ -e "$existing_path" ]] || continue
+  case "$cleanup_file" in
+    amdxcffx64.dll|amdxc64.dll)
+      # A driver DLL the user placed themselves is left for the backup loop below.
+      if ! is_managed_support_file "$existing_path"; then
+        logger -t fgmod "Keeping user-placed $cleanup_file for backup"
+        continue
+      fi
+      ;;
+  esac
+  rm -f "$existing_path"
 done
-unset cleanup_file
+unset cleanup_file existing_path
 
 # === Optional: Backup Original DLLs ===
-original_dlls=("d3dcompiler_47.dll" "amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amdxcffx64.dll" "amdxc64.dll" "amd_fidelityfx_vk.dll")
+# Everything listed here is replaced by a bundle copy below and restored from
+# "<name>.b" by the uninstaller. d3dcompiler_47.dll is intentionally absent: the
+# bundle ships no replacement, so it must stay in place.
+original_dlls=("amd_fidelityfx_dx12.dll" "amd_fidelityfx_framegeneration_dx12.dll" "amd_fidelityfx_upscaler_dx12.dll" "amdxcffx64.dll" "amdxc64.dll" "amd_fidelityfx_vk.dll" "libxess.dll" "libxess_dx11.dll" "libxess_fg.dll" "libxell.dll")
 for dll in "${original_dlls[@]}"; do
   existing_path="$exe_folder_path/$dll"
   backup_path="$exe_folder_path/$dll.b"
@@ -273,6 +354,12 @@ for dll in "${original_dlls[@]}"; do
   fi
 done
 unset existing_path backup_path
+
+# Builds up to 0.17 moved the game's d3dcompiler_47.dll aside without replacing it.
+if [[ -f "$exe_folder_path/d3dcompiler_47.dll.b" && ! -f "$exe_folder_path/d3dcompiler_47.dll" ]]; then
+  mv -f "$exe_folder_path/d3dcompiler_47.dll.b" "$exe_folder_path/d3dcompiler_47.dll"
+  logger -t fgmod "Restored d3dcompiler_47.dll from a legacy backup"
+fi
 
 # === Remove nvapi64.dll and its backup (conflicts from previous fakenvapi versions) ===
 rm -f "$exe_folder_path/nvapi64.dll" "$exe_folder_path/nvapi64.dll.b"
@@ -304,13 +391,35 @@ else
 fi
 
 # === OptiScaler env variables Handling ===
+# Use the interpreter resolved at the top of the script: SteamOS only guarantees
+# `python3`, and a bare `python` is missing on some Steam runtimes.
 if [[ -f "$fgmod_path/update-optiscaler-config.py" ]]; then
-  python "$fgmod_path/update-optiscaler-config.py" "$exe_folder_path/OptiScaler.ini"
+  if [[ -n "$python_bin" ]]; then
+    "$python_bin" "$fgmod_path/update-optiscaler-config.py" "$exe_folder_path/OptiScaler.ini" || true
+  else
+    logger -t fgmod "python3 not found; skipping OptiScaler env-var config update"
+  fi
 fi
 
 # OptiScaler 0.9.0-pre11 can assert on Proton when HQ font auto mode tries to load
 # an external TTF that is not present. Only normalize the default auto value.
 sed -i 's/^UseHQFont[[:space:]]*=[[:space:]]*auto$/UseHQFont=false/' "$exe_folder_path/OptiScaler.ini" || true
+
+# === v10 -> 0.9.4 frame-generation vocabulary ===
+# The Valve RDNA2 runtime's v10 injector saves FGInput=NvngxFG (+ FGNvngxReplacement=Nukems)
+# from its overlay. The 0.9.4 injector used by every other runtime does not know
+# "nvngxfg" and silently disables frame generation, so map it back to the 0.9.4
+# spelling (which v10 still accepts) whenever a 0.9.4 runtime is about to run.
+if [[ "$selected_fsr4_variant" != "rdna2-valve-411-pre10" ]] && grep -qiE '^[[:space:]]*FGInput[[:space:]]*=[[:space:]]*nvngxfg[[:space:]]*$' "$exe_folder_path/OptiScaler.ini" 2>/dev/null; then
+  _fg_replacement=$(sed -nE 's/^[[:space:]]*FGNvngxReplacement[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' "$exe_folder_path/OptiScaler.ini" | head -n1 | tr '[:upper:]' '[:lower:]')
+  if [[ -z "$_fg_replacement" || "$_fg_replacement" == "nukems" || "$_fg_replacement" == "auto" ]]; then
+    echo " Mapping v10 FGInput=nvngxfg back to FGInput=nukems for the 0.9.4 injector"
+    logger -t fgmod "Mapping v10 FG keys back to 0.9.4 vocabulary"
+    variant_ini_overrides+=("FrameGen.FGInput=nukems")
+    variant_ini_overrides+=("FrameGen.FGOutput=nukems")
+  fi
+  unset _fg_replacement
+fi
 
 if [[ ${#variant_ini_overrides[@]} -gt 0 && -n "$python_bin" ]]; then
   "$python_bin" - "$exe_folder_path/OptiScaler.ini" "${variant_ini_overrides[@]}" <<'PY'
@@ -329,12 +438,18 @@ def ensure_trailing_newline():
     if lines and not lines[-1].endswith(('\n', '\r')):
         lines[-1] += newline
 
-def upsert(section, key, value):
+def current_is_auto(line):
+    value = line.split('=', 1)[1].strip() if '=' in line else ''
+    return value == '' or value.lower() == 'auto'
+
+def upsert(section, key, value, soft=False):
     replacement = f'{key}={value}'
     key_pattern = re.compile(rf'^(\s*{re.escape(key)}\s*)=.*$')
     if section is None:
         for idx, line in enumerate(lines):
             if key_pattern.match(line):
+                if soft and not current_is_auto(line):
+                    return
                 line_ending = '\r\n' if line.endswith('\r\n') else ('\n' if line.endswith('\n') else newline)
                 lines[idx] = f'{replacement}{line_ending}'
                 return
@@ -354,6 +469,8 @@ def upsert(section, key, value):
                 in_section = True
                 continue
         if in_section and key_pattern.match(line):
+            if soft and not current_is_auto(line):
+                return
             line_ending = '\r\n' if line.endswith('\r\n') else ('\n' if line.endswith('\n') else newline)
             lines[idx] = f'{replacement}{line_ending}'
             return
@@ -372,13 +489,14 @@ def upsert(section, key, value):
     lines.append(f'{replacement}{newline}')
 
 for override in overrides:
-    key_part, value = override.split('=', 1)
+    soft = '?=' in override
+    key_part, value = override.split('?=', 1) if soft else override.split('=', 1)
     if '.' in key_part:
         section, key = key_part.split('.', 1)
     else:
         section, key = None, key_part
     if key:
-        upsert(section.strip() if section else None, key.strip(), value.strip())
+        upsert(section.strip() if section else None, key.strip(), value.strip(), soft)
 
 path.write_text(''.join(lines), encoding='utf-8')
 PY
@@ -389,16 +507,18 @@ fi
 # patched with an older build will have FGType=<value> with no FGInput/FGOutput,
 # causing the new DLL to silently use nofg. Fix that here on every launch.
 _fgtype_ini="$exe_folder_path/OptiScaler.ini"
-if grep -q '^FGType=' "$_fgtype_ini" 2>/dev/null; then
-  _fgtype_val=$(sed -n 's/^FGType=\(.*\)/\1/p' "$_fgtype_ini")
+if grep -q '^FGType[[:space:]]*=' "$_fgtype_ini" 2>/dev/null; then
+  # Capture only a bare token so inline comments or odd characters can never be
+  # spliced into the sed program below.
+  _fgtype_val=$(sed -n 's/^FGType[[:space:]]*=[[:space:]]*\([A-Za-z0-9_]*\).*/\1/p' "$_fgtype_ini" | head -n1)
   echo " Migrating FGType=$_fgtype_val → FGInput/FGOutput in OptiScaler.ini"
   logger -t fgmod "Migrating FGType=$_fgtype_val → FGInput/FGOutput"
-  if grep -q '^FGInput=' "$_fgtype_ini"; then
+  if grep -q '^FGInput[[:space:]]*=' "$_fgtype_ini"; then
     # FGInput already present — INI already in v0.9-final format; just drop FGType
-    sed -i '/^FGType=/d' "$_fgtype_ini" || true
+    sed -i '/^FGType[[:space:]]*=/d' "$_fgtype_ini" || true
   else
     # Replace FGType=X with FGInput=X + FGOutput=X
-    sed -i "s/^FGType=.*$/FGInput=$_fgtype_val\nFGOutput=$_fgtype_val/" "$_fgtype_ini" || true
+    sed -i "s/^FGType[[:space:]]*=.*$/FGInput=$_fgtype_val\nFGOutput=$_fgtype_val/" "$_fgtype_ini" || true
   fi
 fi
 unset _fgtype_ini _fgtype_val
@@ -474,10 +594,12 @@ if [[ $# -gt 1 ]]; then
   
   # Execute the original command
   export SteamDeck=0
-  # Build WINEDLLOVERRIDES from the actual proxy DLL name (strip extension to get the stem)
+  # Build WINEDLLOVERRIDES from the actual proxy DLL name (strip extension to get the stem).
+  # Wine splits entries on ';' and module names before '=' on ',' (dlls/ntdll/unix/loadorder.c),
+  # so an existing value must be joined with ';' or our entry is swallowed into it.
   if [[ "$dll_name" == *.dll ]]; then
     _wine_dll="${dll_name%.dll}"
-    export WINEDLLOVERRIDES="$WINEDLLOVERRIDES,${_wine_dll}=n,b"
+    export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:+$WINEDLLOVERRIDES;}${_wine_dll}=n,b"
     unset _wine_dll
   fi
   # .asi files are loaded by an ASI loader — no WINEDLLOVERRIDES entry needed
