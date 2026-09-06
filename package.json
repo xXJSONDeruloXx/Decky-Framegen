@@ -1,12 +1,13 @@
 {
   "name": "decky-framegen",
-  "version": "0.17",
+  "version": "0.18",
   "description": "This plugin installs and manages OptiScaler, a tool that enhances upscaling and enables frame generation in a range of DirectX 12 games.",
   "type": "module",
   "scripts": {
-    "build": "rollup -c",
+    "build": "tsc --noEmit -p tsconfig.json && rollup -c",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "watch": "rollup -c -w",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "python3 -m unittest discover -s tests -t tests -v"
   },
   "repository": {
     "type": "git",
@@ -50,13 +51,12 @@
       ]
     }
   },
-  "remote_binary_bundling" : true,
-  "remote_binary": 
-  [
+  "remote_binary_bundling": true,
+  "remote_binary": [
     {
-      "sha256hash":  "575cb4df866116093df75af607e37fd70e10f5163e0f23fd5c804142e80ef0ad",
-      "url":  "https://github.com/optiscaler/OptiScaler/releases/download/v0.9.4/Optiscaler_0.9.4-final.20260718._MM.7z",
-      "name":  "Optiscaler_0.9.4-final.20260718._MM.7z"
+      "sha256hash": "575cb4df866116093df75af607e37fd70e10f5163e0f23fd5c804142e80ef0ad",
+      "url": "https://github.com/optiscaler/OptiScaler/releases/download/v0.9.4/Optiscaler_0.9.4-final.20260718._MM.7z",
+      "name": "Optiscaler_0.9.4-final.20260718._MM.7z"
     },
     {
       "sha256hash": "c7720bc16bede334f59a1a32cd22edbcbbb159685ed5240e61350a5fb0bc8a94",
@@ -79,9 +79,9 @@
       "name": "amdxcffx64_valve_2.3.0.2913.dll"
     },
     {
-      "sha256hash": "b374b19081cc066365d0c6da4808d768e16469b0cbdfc478b6e95999947d5364",
-      "url": "https://github.com/xXJSONDeruloXx/OptiScaler-Bleeding-Edge/releases/download/fsr-4-1-1-rdna2/OptiScaler_0.10.0-pre1.20260622_135940.dll",
-      "name": "OptiScaler_0.10.0-pre1.20260622_135940.dll"
+      "sha256hash": "bc87598d8622ec938089582e88f1689d708a7db76c68dfe415e514c5b13216ed",
+      "url": "https://github.com/optiscaler/OptiScaler-nightly/releases/download/nightly-20260905/OptiScaler_v10.0.0-pre1_20260905.7z",
+      "name": "OptiScaler_v10.0.0-pre1_20260905.7z"
     },
     {
       "sha256hash": "88b9e1be3559737cd205fdf5f2c8550cf1923fb1def4c603e5bf03c3e84131b1",
@@ -90,4 +90,3 @@
     }
   ]
 }
-

@@ -78,12 +78,30 @@ export const FSR4_VARIANT_OPTIONS = [
   {
     value: "rdna2-valve-411-pre10",
     label: "4.1.1 | Valve RDNA2 Compatibility",
-    hint: "Uses the final bundled FSR4.1.1 SDK upscaler with the existing pre10 injector, Valve 4.1.1 amdxcffx64.dll, amdxc64.dll, and RDNA2-specific INI overrides.",
+    hint: "Valve 4.1.1 amdxcffx64.dll + amdxc64.dll with the OptiScaler v10 nightly injector (2026-09-05). Its overlay opens with Insert but ignores the mouse on Steam Deck; prefer the 0.9.4-injector variant.",
+  },
+  {
+    value: "rdna2-valve-411-094",
+    label: "4.1.1 | Valve RDNA2 (0.9.4 injector)",
+    hint: "Steam Deck default. Valve 4.1.1 amdxcffx64.dll + amdxc64.dll injected by OptiScaler 0.9.4 (working overlay), INT8 forced, DX12 upscaler preset to FSR 3.1→4 so FSR 4.1.1 is active without opening the overlay.",
   },
 ] as const;
 
 export type Fsr4VariantValue = typeof FSR4_VARIANT_OPTIONS[number]["value"];
-export const DEFAULT_FSR4_VARIANT: Fsr4VariantValue = "rdna23-int8";
+export const DEFAULT_FSR4_VARIANT: Fsr4VariantValue = "rdna2-valve-411-094";
+
+// Per-game choices (stored in the FRAMEGEN_PATCH marker, applied on Patch/Reinstall)
+export const DX12_UPSCALER_OPTIONS = [
+  { value: "auto", label: "Runtime default" },
+  { value: "fsr4", label: "FSR 3.1 → FSR 4" },
+  { value: "xess", label: "XeSS" },
+  { value: "fsr22", label: "FSR 2.2" },
+] as const;
+
+export const FRAME_GENERATION_OPTIONS = [
+  { value: "default", label: "Game's DLSS FG → Nukem's (default)" },
+  { value: "optifg", label: "OptiFG (experimental, games without DLSS FG)" },
+] as const;
 
 // Common timeout values
 export const TIMEOUTS = {
@@ -101,6 +119,8 @@ export const MESSAGES = {
   uninstallButton: "Remove OptiScaler Mod",
   installSuccess: "OptiScaler mod setup successfully!",
   uninstallSuccess: "OptiScaler mod removed successfully.",
+  bundleOutdated: "Installed OptiScaler bundle is from an older plugin version. Update it, then re-patch your games.",
+  updateBundleButton: "Update OptiScaler bundle",
   instructionTitle: "How to Use:",
-  instructionText: "Use 'Copy launch options' for the standard direct launch-options method. If you want the wrapper commands instead, enable Manual Mode to reveal 'Copy Patch Command' and 'Copy Unpatch Command'.\n\nIn-game: Enable DLSS in graphics settings to unlock FSR 3.1/XeSS 2.0 in DirectX12 Games.\n\nFor extended OptiScaler options, assign a back button to a keyboard's 'Insert' key."
+  instructionText: "Pick a game under 'Steam game' and press the Patch button: the plugin copies OptiScaler into the game folder and sets the Steam launch options for you. 'Copy launch options' only re-copies those launch options (for example if Steam lost them); it does not patch anything. Manual Mode exposes the older ~/fgmod wrapper commands instead.\n\nIn-game: enable DLSS in the graphics settings to unlock FSR 3.1/XeSS in DirectX 12 games.\n\nFor the OptiScaler overlay, bind a back button to the keyboard 'Insert' key."
 };

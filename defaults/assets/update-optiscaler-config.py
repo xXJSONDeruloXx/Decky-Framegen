@@ -83,21 +83,27 @@ def update_optiscaler_config(file_path):
         section_pattern = re.compile(rf'^\s*\[{re.escape(section_target)}]\s*')
         key_pattern = re.compile(rf'^(\s*{re.escape(key_target)}\s*)=.*')
 
-        for i, line in enumerate(lines):
-            # Track if we are inside the correct section
-            if section_pattern.match(line):
-                found_section = True
-                continue
+        try:
+            for i, line in enumerate(lines):
+                # Track if we are inside the correct section
+                if section_pattern.match(line):
+                    found_section = True
+                    continue
 
-            # If we hit a new section before finding the key, the key doesn't exist in the target section
-            if found_section and line.strip().startswith('[') and not section_pattern.match(line):
-                break
+                # If we hit a new section before finding the key, the key doesn't exist in the target section
+                if found_section and line.strip().startswith('[') and not section_pattern.match(line):
+                    break
 
-            # Replace the value if the key is found within the correct section
-            if found_section and key_pattern.match(line):
-                lines[i] = key_pattern.sub(r'\1=' + env_value, line)
-                print(f"Updated: [{section_target}] {key_target} = {env_value} (from {env_name})")
-                break
+                # Replace the value if the key is found within the correct section.
+                # A callable replacement inserts the value literally: a plain string
+                # would be parsed as a regex template, so values with backslashes
+                # (e.g. a Windows font path) used to raise re.error and abort every update.
+                if found_section and key_pattern.match(line):
+                    lines[i] = key_pattern.sub(lambda m, v=env_value: m.group(1) + '=' + v, line)
+                    print(f"Updated: [{section_target}] {key_target} = {env_value} (from {env_name})")
+                    break
+        except Exception as exc:
+            print(f"Skipped {env_name}: {exc}")
 
     # Write the modified content back
     with open(file_path, 'w') as f:

@@ -55,3 +55,8 @@ out/*
 cli/
 cli/*
 cli/decky
+
+# Bundled binaries (~360 MB) are fetched with scripts/fetch-bin.py from package.json remote_binary
+bin/
+*.part
+*.zip

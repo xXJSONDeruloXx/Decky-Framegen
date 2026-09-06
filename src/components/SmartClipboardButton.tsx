@@ -70,19 +70,21 @@ export function SmartClipboardButton({
       tempInput.focus();
       tempInput.select();
       
-      // Try copying using execCommand first (most reliable in gaming mode)
+      // Try copying using execCommand first (most reliable in gaming mode).
+      // It returns false (without throwing) when unsupported, so the clipboard API
+      // fallback must run in both the "threw" and the "returned false" cases.
       let copySuccess = false;
       try {
-        if (document.execCommand('copy')) {
-          copySuccess = true;
-        }
+        copySuccess = document.execCommand('copy') === true;
       } catch (e) {
-        // If execCommand fails, try navigator.clipboard as fallback
+        console.error('execCommand copy failed:', e);
+      }
+      if (!copySuccess) {
         try {
           await navigator.clipboard.writeText(text);
           copySuccess = true;
         } catch (clipboardError) {
-          console.error('Both copy methods failed:', e, clipboardError);
+          console.error('Both copy methods failed:', clipboardError);
         }
       }
       

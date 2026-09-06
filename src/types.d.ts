@@ -13,12 +13,5 @@ declare module "*.jpg" {
   export default content;
 }
 
-declare const SteamClient: {
-  Apps: {
-    RegisterForAppDetails(
-      appId: number,
-      callback: (details: { strLaunchOptions?: string }) => void
-    ): { unregister: () => void };
-    SetAppLaunchOptions(appId: number, options: string): void;
-  };
-};
+// `SteamClient` is declared globally by @decky/ui; a second declaration here
+// made `tsc --noEmit` fail (TS2451) while rollup silently ignored it.
