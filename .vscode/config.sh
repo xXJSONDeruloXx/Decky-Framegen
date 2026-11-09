@@ -7,6 +7,6 @@ if ! [[ -e "${SCRIPT_DIR}/settings.json" ]]; then
      cp "${SCRIPT_DIR}/defsettings.json" "${SCRIPT_DIR}/settings.json"
      exit 1
 else
-    printf '.vscode/settings.json does exist. Congrats.\n'
-    printf 'Make sure to change settings.json to match your deck.\n'
+    print(".vscode/settings.json does exist. Congrats.\n")
+    print("Make sure to change settings.json to match your deck.\n")
 fi
