@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 CLI_LOCATION="$(pwd)/cli"
 echo "Building plugin in $(pwd)"
-printf "Please input sudo password to proceed.\n"
+print(f"Please input sudo password to proceed.\n")
 
 # read -s sudopass
 
