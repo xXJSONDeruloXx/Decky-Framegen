@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { PanelSectionRow, ButtonItem, ConfirmModal, showModal } from "@decky/ui";
 import { FaClipboard, FaCheck } from "react-icons/fa";
 import { toaster } from "@decky/api";
+import { L } from "../utils/i18n";
 
 interface SmartClipboardButtonProps {
   command?: string;
@@ -10,7 +11,7 @@ interface SmartClipboardButtonProps {
 
 export function SmartClipboardButton({ 
   command = "~/fgmod/fgmod %command%",
-  buttonText = "Copy Launch Command"
+  buttonText = L("Copy Launch Command", "複製啟動指令")
 }: SmartClipboardButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -34,12 +35,13 @@ export function SmartClipboardButton({
     if (isPatchCommand) {
       showModal(
         <ConfirmModal 
-          strTitle={`Patch Game with OptiScaler?`}
-          strDescription={
-            "WARNING: Decky Framegen does not unpatch games when uninstalled. Be sure to unpatch the game or run the OptiScaler uninstall script inside the game files if you choose to uninstall the plugin or the game has issues."
-          }
-          strOKButtonText="Copy Patch Command"
-          strCancelButtonText="Cancel"
+          strTitle={L("Patch Game with OptiScaler?", "確定要使用 OptiScaler 修補遊戲？")}
+          strDescription={L(
+            "WARNING: Decky Framegen does not unpatch games when uninstalled. Be sure to unpatch the game or run the OptiScaler uninstall script inside the game files if you choose to uninstall the plugin or the game has issues.",
+            "警告：解除安裝 Decky Framegen 時不會自動還原已修補的遊戲。若未來要移除此插件或遊戲發生異常，請務必先還原該遊戲或在遊戲目錄執行 OptiScaler 解除安裝腳本。",
+          )}
+          strOKButtonText={L("Copy Patch Command", "複製修補指令")}
+          strCancelButtonText={L("Cancel", "取消")}
           onOK={async () => {
             await performCopy();
           }}
@@ -105,15 +107,15 @@ export function SmartClipboardButton({
         }
       } else {
         toaster.toast({
-          title: "Copy Failed",
-          body: "Unable to copy to clipboard"
+          title: L("Copy Failed", "複製失敗"),
+          body: L("Unable to copy to clipboard", "無法複製到剪貼簿")
         });
       }
 
     } catch (error) {
       toaster.toast({
-        title: "Copy Failed",
-        body: `Error: ${String(error)}`
+        title: L("Copy Failed", "複製失敗"),
+        body: `${L("Error", "錯誤")}: ${String(error)}`
       });
     } finally {
       setIsLoading(false);
@@ -144,7 +146,7 @@ export function SmartClipboardButton({
             color: showSuccess ? "#4CAF50" : "inherit",
             fontWeight: showSuccess ? "bold" : "normal"
           }}>
-            {showSuccess ? "Copied to clipboard" : isLoading ? "Copying..." : buttonText}
+            {showSuccess ? L("Copied to clipboard", "已複製到剪貼簿") : isLoading ? L("Copying...", "正在複製...") : buttonText}
           </div>
         </div>
       </ButtonItem>
