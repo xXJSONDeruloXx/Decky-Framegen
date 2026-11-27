@@ -1,4 +1,5 @@
 // Common types for the application
+import { L } from "./i18n";
 
 export interface ResultType {
   status: string;
@@ -47,13 +48,13 @@ export const STYLES = {
 
 // Proxy DLL name options for OptiScaler injection
 export const PROXY_DLL_OPTIONS = [
-  { value: "dxgi.dll",       label: "dxgi.dll (default)",  hint: "Works for most DX12 games. Default." },
-  { value: "winmm.dll",      label: "winmm.dll",      hint: "Use when dxgi.dll conflicts with an existing game file." },
-  { value: "version.dll",    label: "version.dll",    hint: "Common fallback; works well with many launchers." },
-  { value: "dbghelp.dll",    label: "dbghelp.dll",    hint: "Use for debug helper hook paths." },
-  { value: "winhttp.dll",    label: "winhttp.dll",    hint: "Use when other DLL names conflict." },
-  { value: "wininet.dll",    label: "wininet.dll",    hint: "Use when other DLL names conflict." },
-  { value: "OptiScaler.asi", label: "OptiScaler.asi", hint: "For ASI loaders. Requires an ASI loader already installed in the game." },
+  { value: "dxgi.dll",       label: L("dxgi.dll (default)", "dxgi.dll（預設）"),  hint: L("Works for most DX12 games. Default.", "適用於多數 DX12 遊戲，建議預設使用。") },
+  { value: "winmm.dll",      label: "winmm.dll",      hint: L("Use when dxgi.dll conflicts with an existing game file.", "當 dxgi.dll 與現有遊戲檔案衝突時使用。") },
+  { value: "version.dll",    label: "version.dll",    hint: L("Common fallback; works well with many launchers.", "常見備援選項，相容於多數啟動器。") },
+  { value: "dbghelp.dll",    label: "dbghelp.dll",    hint: L("Use for debug helper hook paths.", "適用於除錯輔助程式庫掛鉤路徑。") },
+  { value: "winhttp.dll",    label: "winhttp.dll",    hint: L("Use when other DLL names conflict.", "當其他 DLL 名稱衝突時使用。") },
+  { value: "wininet.dll",    label: "wininet.dll",    hint: L("Use when other DLL names conflict.", "當其他 DLL 名稱衝突時使用。") },
+  { value: "OptiScaler.asi", label: "OptiScaler.asi", hint: L("For ASI loaders. Requires an ASI loader already installed in the game.", "適用於 ASI 載入器，遊戲內需已安裝 ASI Loader。") },
 ] as const;
 
 export type ProxyDllValue = typeof PROXY_DLL_OPTIONS[number]["value"];
@@ -62,23 +63,35 @@ export const DEFAULT_PROXY_DLL: ProxyDllValue = "dxgi.dll";
 export const FSR4_VARIANT_OPTIONS = [
   {
     value: "rdna23-int8",
-    label: "4.0.2c | RDNA2/3 Compatibility",
-    hint: "Older compatible runtime for RDNA2/3. In most cases, use the Valve 4.1.1 path for RDNA2 or the regular 4.1.1 driver override.",
+    label: L("4.0.2c | RDNA2/3 Compatibility", "4.0.2c | RDNA2/3 相容版"),
+    hint: L(
+      "Older compatible runtime for RDNA2/3. In most cases, use the Valve 4.1.1 path for RDNA2 or the regular 4.1.1 driver override.",
+      "較舊的 RDNA2/3 相容執行環境。多數情況下，RDNA2 建議使用 Valve 4.1.1 路徑或一般 4.1.1 驅動覆寫。",
+    ),
   },
   {
     value: "rdna4-native",
     label: "4.1.1 | FFX 2.3 SDK",
-    hint: "Uses OptiScaler 0.9.4's bundled FSR4.1.1 SDK upscaler. Official FSR4 support is RDNA4 (FP8) and RDNA3 desktop GPUs (INT8).",
+    hint: L(
+      "Uses OptiScaler 0.9.4's bundled FSR4.1.1 SDK upscaler. Official FSR4 support is RDNA4 (FP8) and RDNA3 desktop GPUs (INT8).",
+      "使用 OptiScaler 0.9.4 隨附的 FSR4.1.1 SDK 升頻器。官方 FSR4 支援為 RDNA4 (FP8) 與 RDNA3 桌上型 GPU (INT8)。",
+    ),
   },
   {
     value: "rdna34-official-411",
-    label: "4.1.1 | Driver Override",
-    hint: "Uses the final bundled FSR4.1.1 SDK upscaler plus the separately bundled 4.1.1 amdxcffx64.dll driver override.",
+    label: L("4.1.1 | Driver Override", "4.1.1 | 驅動程式覆寫"),
+    hint: L(
+      "Uses the final bundled FSR4.1.1 SDK upscaler plus the separately bundled 4.1.1 amdxcffx64.dll driver override.",
+      "使用最終隨附的 FSR4.1.1 SDK 升頻器搭配獨立的 4.1.1 amdxcffx64.dll 驅動覆寫。",
+    ),
   },
   {
     value: "rdna2-valve-411-pre10",
-    label: "4.1.1 | Valve RDNA2 Compatibility",
-    hint: "Uses the final bundled FSR4.1.1 SDK upscaler with the existing pre10 injector, Valve 4.1.1 amdxcffx64.dll, amdxc64.dll, and RDNA2-specific INI overrides.",
+    label: L("4.1.1 | Valve RDNA2 Compatibility", "4.1.1 | Valve RDNA2 相容版"),
+    hint: L(
+      "Uses the final bundled FSR4.1.1 SDK upscaler with the existing pre10 injector, Valve 4.1.1 amdxcffx64.dll, amdxc64.dll, and RDNA2-specific INI overrides.",
+      "使用最終隨附的 FSR4.1.1 SDK 升頻器搭配 pre10 注入器、Valve 4.1.1 amdxcffx64.dll、amdxc64.dll 與 RDNA2 專用 INI 覆寫。",
+    ),
   },
 ] as const;
 
@@ -93,14 +106,17 @@ export const TIMEOUTS = {
 
 // Message strings
 export const MESSAGES = {
-  modInstalled: "OptiScaler Mod Installed",
-  modNotInstalled: "OptiScaler Mod Not Installed",
-  installing: "Installing OptiScaler...",
-  installButton: "Setup OptiScaler Mod",
-  uninstalling: "Removing OptiScaler...",
-  uninstallButton: "Remove OptiScaler Mod",
-  installSuccess: "OptiScaler mod setup successfully!",
-  uninstallSuccess: "OptiScaler mod removed successfully.",
-  instructionTitle: "How to Use:",
-  instructionText: "Use 'Copy launch options' for the standard direct launch-options method. If you want the wrapper commands instead, enable Manual Mode to reveal 'Copy Patch Command' and 'Copy Unpatch Command'.\n\nIn-game: Enable DLSS in graphics settings to unlock FSR 3.1/XeSS 2.0 in DirectX12 Games.\n\nFor extended OptiScaler options, assign a back button to a keyboard's 'Insert' key."
+  modInstalled: L("OptiScaler Mod Installed", "OptiScaler 模組已安裝"),
+  modNotInstalled: L("OptiScaler Mod Not Installed", "尚未安裝 OptiScaler 模組"),
+  installing: L("Installing OptiScaler...", "正在安裝 OptiScaler..."),
+  installButton: L("Setup OptiScaler Mod", "安裝 OptiScaler 模組"),
+  uninstalling: L("Removing OptiScaler...", "正在移除 OptiScaler..."),
+  uninstallButton: L("Remove OptiScaler Mod", "移除 OptiScaler 模組"),
+  installSuccess: L("OptiScaler mod setup successfully!", "OptiScaler 模組設定完成！"),
+  uninstallSuccess: L("OptiScaler mod removed successfully.", "OptiScaler 模組已成功移除。"),
+  instructionTitle: L("How to Use:", "使用說明："),
+  instructionText: L(
+    "Use 'Copy launch options' for the standard direct launch-options method. If you want the wrapper commands instead, enable Manual Mode to reveal 'Copy Patch Command' and 'Copy Unpatch Command'.\n\nIn-game: Enable DLSS in graphics settings to unlock FSR 3.1/XeSS 2.0 in DirectX12 Games.\n\nFor extended OptiScaler options, assign a back button to a keyboard's 'Insert' key.",
+    "一般情況請使用「複製啟動選項」直接套用標準啟動參數。若需使用包裝腳本指令，請開啟手動模式以顯示「複製修補指令」與「複製還原指令」。\n\n遊戲內設定：在顯示設定中開啟 DLSS，即可於 DirectX 12 遊戲解鎖 FSR 3.1 / XeSS 2.0。\n\n若要開啟進階 OptiScaler 選單，請將手把背鍵指定為鍵盤的「Insert」鍵。",
+  )
 };

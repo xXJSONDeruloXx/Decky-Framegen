@@ -4,6 +4,7 @@ import { runInstallFGMod, runUninstallFGMod, setDefaultFsr4Variant } from "../ap
 import { OperationResult } from "./ResultDisplay";
 import { createAutoCleanupTimer } from "../utils";
 import { TIMEOUTS, PROXY_DLL_OPTIONS, DEFAULT_PROXY_DLL, FSR4_VARIANT_OPTIONS, DEFAULT_FSR4_VARIANT } from "../utils/constants";
+import { L } from "../utils/i18n";
 import { InstallationStatus } from "./InstallationStatus";
 import { OptiScalerHeader } from "./OptiScalerHeader";
 import { ClipboardCommands } from "./ClipboardCommands";
@@ -100,7 +101,7 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
       setSwitchingVariant(true);
       const result = await setDefaultFsr4Variant(nextVariant);
       if (result.status !== "success") {
-        throw new Error(result.message || result.output || "Failed to switch default FSR4 runtime.");
+        throw new Error(result.message || result.output || L("Failed to switch default FSR4 runtime.", "無法切換預設 FSR4 執行環境。"));
       }
       setFsr4Variant(result.selected_default_variant || nextVariant);
       setFsr4VariantTouched(false);
@@ -127,9 +128,9 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
       <PanelSectionRow>
         <DropdownItem
           layout="below"
-          label="Default FSR4 runtime"
+          label={L("Default FSR4 runtime", "預設 FSR4 執行環境")}
           description={FSR4_VARIANT_OPTIONS.find((option) => option.value === fsr4Variant)?.hint}
-          menuLabel="Default FSR4 runtime"
+          menuLabel={L("Default FSR4 runtime", "預設 FSR4 執行環境")}
           selectedOption={fsr4Variant}
           rgOptions={FSR4_VARIANT_OPTIONS.map((option) => ({ data: option.value, label: option.label }))}
           disabled={installing || uninstalling || switchingVariant}
@@ -141,7 +142,7 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
 
       {pathExists === true && fgmodInfo?.version && installedVariantLabel && (
         <PanelSectionRow>
-          <Field label="Installed bundle" description={`OptiScaler ${fgmodInfo.version}`}>
+          <Field label={L("Installed bundle", "已安裝套件")} description={`OptiScaler ${fgmodInfo.version}`}>
             {installedVariantLabel}
           </Field>
         </PanelSectionRow>
@@ -151,9 +152,9 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
         <PanelSectionRow>
           <DropdownItem
             layout="below"
-            label="Proxy DLL name"
+            label={L("Proxy DLL name", "代理 DLL 名稱")}
             description={PROXY_DLL_OPTIONS.find((o) => o.value === dllName)?.hint}
-            menuLabel="Proxy DLL name"
+            menuLabel={L("Proxy DLL name", "代理 DLL 名稱")}
             selectedOption={dllName}
             rgOptions={PROXY_DLL_OPTIONS.map((o) => ({ data: o.value, label: o.label }))}
             onChange={(option) => setDllName(String(option.data))}
@@ -170,8 +171,11 @@ export function OptiScalerControls({ pathExists, setPathExists, fgmodInfo }: Opt
       {pathExists === true && (
         <PanelSectionRow>
           <ToggleField
-            label="Manual Mode"
-            description="Show wrapper command clipboard buttons for patching and unpatching through ~/fgmod scripts."
+            label={L("Manual Mode", "手動模式")}
+            description={L(
+              "Show wrapper command clipboard buttons for patching and unpatching through ~/fgmod scripts.",
+              "顯示透過 ~/fgmod 腳本進行修補與還原的包裝指令複製按鈕。",
+            )}
             checked={manualClipboardModeEnabled}
             onChange={setManualClipboardModeEnabled}
           />

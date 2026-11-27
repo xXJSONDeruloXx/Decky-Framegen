@@ -3,6 +3,7 @@ import { ButtonItem, DropdownItem, Field, PanelSectionRow } from "@decky/ui";
 import { toaster } from "@decky/api";
 import { listInstalledGames, getGameStatus, patchGame, unpatchGame } from "../api";
 import { FSR4_VARIANT_OPTIONS } from "../utils/constants";
+import { L } from "../utils/i18n";
 
 // ─── SteamClient helpers ─────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ const getAppLaunchOptions = (appId: number): Promise<string> =>
       if (settled) return;
       settled = true;
       unregister();
-      reject(new Error("Timed out reading launch options."));
+      reject(new Error(L("Timed out reading launch options.", "讀取啟動選項逾時。")));
     }, 5000);
     const registration = SteamClient.Apps.RegisterForAppDetails(
       appId,
@@ -83,7 +84,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     setGamesLoading(true);
     try {
       const result = await listInstalledGames();
-      if (result.status !== "success") throw new Error(result.message || "Failed to load games.");
+      if (result.status !== "success") throw new Error(result.message || L("Failed to load games.", "無法載入遊戲。"));
       const gameList = result.games as GameEntry[];
       setGames(gameList);
       if (!gameList.length) {
@@ -98,7 +99,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
         return valid;
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to load games.";
+      const msg = err instanceof Error ? err.message : L("Failed to load games.", "無法載入遊戲。");
       toaster.toast({ title: "Decky Framegen", body: msg });
     } finally {
       setGamesLoading(false);
@@ -117,7 +118,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     } catch (err) {
       setGameStatus({
         status: "error",
-        message: err instanceof Error ? err.message : "Failed to load status.",
+        message: err instanceof Error ? err.message : L("Failed to load status.", "無法載入狀態。"),
       });
     } finally {
       setStatusLoading(false);
@@ -155,12 +156,12 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
   const canUnpatch = Boolean(selectedGame && gameStatus?.patched && !busyAction);
 
   const patchButtonLabel = useMemo(() => {
-    if (busyAction === "patch") return "Patching...";
-    if (!selectedGame) return "Patch this game";
-    if (!gameStatus?.install_found) return "Install not found";
-    if (isPatchedWithDifferentDll) return `Switch to ${dllName}`;
-    if (gameStatus?.patched) return `Reinstall (${dllName})`;
-    return `Patch with ${dllName}`;
+    if (busyAction === "patch") return L("Patching...", "正在套用修補...");
+    if (!selectedGame) return L("Patch this game", "修補此遊戲");
+    if (!gameStatus?.install_found) return L("Install not found", "找不到遊戲安裝路徑");
+    if (isPatchedWithDifferentDll) return L(`Switch to ${dllName}`, `切換為 ${dllName}`);
+    if (gameStatus?.patched) return L(`Reinstall (${dllName})`, `重新安裝 (${dllName})`);
+    return L(`Patch with ${dllName}`, `以 ${dllName} 修補`);
   }, [busyAction, dllName, gameStatus, isPatchedWithDifferentDll, selectedGame]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -177,15 +178,15 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
         // non-fatal: proceed without current launch options
       }
       const result = await patchGame(selectedAppId, dllName, currentLaunchOptions, fsr4Variant);
-      if (result.status !== "success") throw new Error(result.message || "Patch failed.");
+      if (result.status !== "success") throw new Error(result.message || L("Patch failed.", "修補失敗。"));
       setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
-      const msg = result.message || `Patched ${selectedGame.name}.`;
+      const msg = result.message || L(`Patched ${selectedGame.name}.`, `已修補 ${selectedGame.name}。`);
       setResultMessage(msg);
       toaster.toast({ title: "Decky Framegen", body: msg });
       await loadStatus(selectedAppId);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Patch failed.";
-      setResultMessage(`Error: ${msg}`);
+      const msg = err instanceof Error ? err.message : L("Patch failed.", "修補失敗。");
+      setResultMessage(L(`Error: ${msg}`, `錯誤：${msg}`));
       toaster.toast({ title: "Decky Framegen", body: msg });
     } finally {
       setBusyAction(null);
@@ -198,15 +199,15 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
     setResultMessage("");
     try {
       const result = await unpatchGame(selectedAppId);
-      if (result.status !== "success") throw new Error(result.message || "Unpatch failed.");
+      if (result.status !== "success") throw new Error(result.message || L("Unpatch failed.", "還原修補失敗。"));
       setAppLaunchOptions(Number(selectedAppId), result.launch_options || "");
-      const msg = result.message || `Unpatched ${selectedGame.name}.`;
+      const msg = result.message || L(`Unpatched ${selectedGame.name}.`, `已還原 ${selectedGame.name} 的修補。`);
       setResultMessage(msg);
       toaster.toast({ title: "Decky Framegen", body: msg });
       await loadStatus(selectedAppId);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unpatch failed.";
-      setResultMessage(`Error: ${msg}`);
+      const msg = err instanceof Error ? err.message : L("Unpatch failed.", "還原修補失敗。");
+      setResultMessage(L(`Error: ${msg}`, `錯誤：${msg}`));
       toaster.toast({ title: "Decky Framegen", body: msg });
     } finally {
       setBusyAction(null);
@@ -217,15 +218,15 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
 
   const statusDisplay = useMemo(() => {
     if (!selectedGame) return { text: "—", color: undefined as string | undefined };
-    if (statusLoading) return { text: "Loading...", color: undefined };
+    if (statusLoading) return { text: L("Loading...", "載入中..."), color: undefined };
     if (!gameStatus || gameStatus.status === "error")
       return { text: gameStatus?.message || "—", color: undefined };
-    if (!gameStatus.install_found) return { text: "Install not found", color: "#ffd866" };
-    if (!gameStatus.patched) return { text: "Not patched", color: undefined };
-    const dllLabel = gameStatus.dll_name || "unknown";
+    if (!gameStatus.install_found) return { text: L("Install not found", "找不到安裝路徑"), color: "#ffd866" };
+    if (!gameStatus.patched) return { text: L("Not patched", "未修補"), color: undefined };
+    const dllLabel = gameStatus.dll_name || L("unknown", "未知");
     if (isPatchedWithDifferentDll)
-      return { text: `Patched (${dllLabel}) — switch available`, color: "#ffd866" };
-    return { text: `Patched (${dllLabel})`, color: "#3fb950" };
+      return { text: L(`Patched (${dllLabel}) — switch available`, `已修補 (${dllLabel}) — 可切換`), color: "#ffd866" };
+    return { text: L(`Patched (${dllLabel})`, `已修補 (${dllLabel})`), color: "#3fb950" };
   }, [gameStatus, isPatchedWithDifferentDll, selectedGame, statusLoading]);
 
   const focusableFieldProps = { focusable: true, highlightOnFocus: true } as const;
@@ -237,14 +238,14 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
       <PanelSectionRow>
         <DropdownItem
           layout="below"
-          label="Steam game"
-          menuLabel="Select a Steam game"
-          strDefaultLabel={gamesLoading ? "Loading games..." : "Choose a game"}
+          label={L("Steam game", "Steam 遊戲")}
+          menuLabel={L("Select a Steam game", "選擇 Steam 遊戲")}
+          strDefaultLabel={gamesLoading ? L("Loading games...", "正在載入遊戲...") : L("Choose a game", "選擇遊戲")}
           disabled={gamesLoading || games.length === 0}
           selectedOption={selectedAppId}
           rgOptions={games.map((g) => ({
             data: g.appid,
-            label: g.install_found === false ? `${g.name} (not installed)` : g.name,
+            label: g.install_found === false ? `${g.name} ${L("(not installed)", "（未安裝）")}` : g.name,
           }))}
           onChange={(option) => {
             const next = String(option.data);
@@ -258,7 +259,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
       {selectedGame && (
         <>
           <PanelSectionRow>
-            <Field {...focusableFieldProps} label="Patch status">
+            <Field {...focusableFieldProps} label={L("Patch status", "修補狀態")}>
               {statusDisplay.color ? (
                 <span style={{ color: statusDisplay.color, fontWeight: 600 }}>
                   {statusDisplay.text}
@@ -270,10 +271,10 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
           </PanelSectionRow>
 
           <PanelSectionRow>
-            <Field {...focusableFieldProps} label="FSR4 runtime">
+            <Field {...focusableFieldProps} label={L("FSR4 runtime", "FSR4 執行環境")}>
               {gameStatus?.patched
-                ? (gameStatus?.fsr4_variant_label || "Unknown")
-                : `Will patch with ${selectedVariantLabel}`}
+                ? (gameStatus?.fsr4_variant_label || L("Unknown", "未知"))
+                : L(`Will patch with ${selectedVariantLabel}`, `將使用 ${selectedVariantLabel} 修補`)}
             </Field>
           </PanelSectionRow>
 
@@ -290,7 +291,7 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
                 disabled={busyAction !== null}
                 onClick={handleUnpatch}
               >
-                {busyAction === "unpatch" ? "Unpatching..." : "Unpatch this game"}
+                {busyAction === "unpatch" ? L("Unpatching...", "正在還原修補...") : L("Unpatch this game", "還原此遊戲修補")}
               </ButtonItem>
             </PanelSectionRow>
           )}
@@ -301,13 +302,13 @@ export function SteamGamePatcher({ dllName, fsr4Variant }: SteamGamePatcherProps
               disabled={!selectedAppId || busyAction !== null || statusLoading}
               onClick={() => void loadStatus(selectedAppId)}
             >
-              {statusLoading ? "Refreshing..." : "Refresh status"}
+              {statusLoading ? L("Refreshing...", "正在重新整理...") : L("Refresh status", "重新整理狀態")}
             </ButtonItem>
           </PanelSectionRow>
 
           {resultMessage && (
             <PanelSectionRow>
-              <Field {...focusableFieldProps} label="Result">
+              <Field {...focusableFieldProps} label={L("Result", "執行結果")}>
                 {resultMessage}
               </Field>
             </PanelSectionRow>

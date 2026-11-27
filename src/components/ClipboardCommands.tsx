@@ -1,4 +1,5 @@
 import { SmartClipboardButton } from "./SmartClipboardButton";
+import { L } from "../utils/i18n";
 
 interface ClipboardCommandsProps {
   pathExists: boolean | null;
@@ -25,18 +26,18 @@ export function ClipboardCommands({
       {showLaunchOptions ? (
         <SmartClipboardButton
           command={launchCmd}
-          buttonText="Copy launch options"
+          buttonText={L("Copy launch options", "複製啟動選項")}
         />
       ) : null}
       {manualModeEnabled ? (
         <>
           <SmartClipboardButton
             command="~/fgmod/fgmod %command%"
-            buttonText="Copy Patch Command"
+            buttonText={L("Copy Patch Command", "複製修補指令")}
           />
           <SmartClipboardButton
             command="~/fgmod/fgmod-uninstaller.sh %command%"
-            buttonText="Copy Unpatch Command"
+            buttonText={L("Copy Unpatch Command", "複製還原指令")}
           />
         </>
       ) : null}

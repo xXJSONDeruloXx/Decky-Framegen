@@ -4,6 +4,7 @@ import { FileSelectionType, openFilePicker } from "@decky/api";
 import { getPathDefaults, runManualPatch, runManualUnpatch } from "../api";
 import type { ApiResponse } from "../types/index";
 import { SmartClipboardButton } from "./SmartClipboardButton";
+import { L } from "../utils/i18n";
 
 interface PathDefaults {
   home: string;
@@ -53,9 +54,9 @@ const INITIAL_PICKER_STATE: PickerState = {
 const formatResultMessage = (result: ApiResponse | null) => {
   if (!result) return null;
   if (result.status === "success") {
-    return result.message || result.output || "Operation completed successfully.";
+    return result.message || result.output || L("Operation completed successfully.", "操作已順利完成。");
   }
-  return result.message || result.output || "Operation failed.";
+  return result.message || result.output || L("Operation failed.", "操作失敗。");
 };
 
 export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, fsr4Variant }: ManualPatchControlsProps) => {
@@ -111,9 +112,9 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
   const statusLabel = useMemo(() => {
     if (!operationResult || !lastOperation) return null;
     if (operationResult.status === "success") {
-      return lastOperation === "patch" ? "Game patched" : "Game unpatched";
+      return lastOperation === "patch" ? L("Game patched", "遊戲已修補") : L("Game unpatched", "遊戲已還原");
     }
-    return lastOperation === "patch" ? "Patch failed" : "Unpatch failed";
+    return lastOperation === "patch" ? L("Patch failed", "修補失敗") : L("Unpatch failed", "還原失敗");
   }, [lastOperation, operationResult]);
 
   const openDirectoryPicker = useCallback(async () => {
@@ -169,7 +170,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
           action === "patch"
             ? await runManualPatch(selectedPath, dllName, fsr4Variant)
             : await runManualUnpatch(selectedPath);
-        setOperationResult(response ?? { status: "error", message: "No response from backend." });
+        setOperationResult(response ?? { status: "error", message: L("No response from backend.", "後端未回應。") });
       } catch (err) {
         setOperationResult({
           status: "error",
@@ -203,11 +204,11 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
     <>
       <PanelSectionRow>
         <ToggleField
-          label="Advanced Mode"
+          label={L("Advanced Mode", "進階模式")}
           description={
             isAvailable
-              ? "Manually apply OptiScaler to a specific game directory."
-              : "Install OptiScaler first to enable manual patching."
+              ? L("Manually apply OptiScaler to a specific game directory.", "手動對特定遊戲資料夾套用 OptiScaler。")
+              : L("Install OptiScaler first to enable manual patching.", "請先安裝 OptiScaler 才能啟用手動修補。")
           }
           checked={isEnabled && isAvailable}
           disabled={!isAvailable}
@@ -223,22 +224,22 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
                 ? "SteamDeck=0 %command%"
                 : `WINEDLLOVERRIDES="${dllName.replace(".dll", "")}=n,b" SteamDeck=0 %command%`
             }
-            buttonText="Manual launch cmd"
+            buttonText={L("Manual launch cmd", "複製手動啟動指令")}
           />
           <PanelSectionRow>
             <ButtonItem
               layout="below"
               onClick={openDirectoryPicker}
-              description="Choose the game's installation directory (where the EXE lives)."
+              description={L("Choose the game's installation directory (where the EXE lives).", "選擇遊戲的安裝資料夾（EXE 執行檔所在位置）。")}
             >
-              Select directory
+              {L("Select directory", "選擇資料夾")}
             </ButtonItem>
           </PanelSectionRow>
 
           {pickerState.lastError && (
             <PanelSectionRow>
               <Field
-                label="Picker error"
+                label={L("Picker error", "資料夾選擇器錯誤")}
                 description={pickerState.lastError}
               />
             </PanelSectionRow>
@@ -248,8 +249,8 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
             <>
               <PanelSectionRow>
                 <Field
-                  label="Target directory"
-                  description="OptiScaler files will be copied here."
+                  label={L("Target directory", "目標資料夾")}
+                  description={L("OptiScaler files will be copied here.", "OptiScaler 檔案將會複製至此處。")}
                 >
                   <div
                     style={{
@@ -275,7 +276,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
                   disabled={busy}
                   onClick={() => runOperation("patch")}
                 >
-                  {isPatching ? "Patching..." : "Patch directory"}
+                  {isPatching ? L("Patching...", "正在修補...") : L("Patch directory", "修補此資料夾")}
                 </ButtonItem>
               </PanelSectionRow>
 
@@ -285,7 +286,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
                   disabled={busy}
                   onClick={() => runOperation("unpatch")}
                 >
-                  {isUnpatching ? "Reverting..." : "Unpatch directory"}
+                  {isUnpatching ? L("Reverting...", "正在還原...") : L("Unpatch directory", "還原此資料夾")}
                 </ButtonItem>
               </PanelSectionRow>
             </>
@@ -294,7 +295,7 @@ export const ManualPatchControls = ({ isAvailable, onManualModeChange, dllName, 
           {operationResult && (
             <PanelSectionRow>
               <Field
-                label={statusLabel ?? (wasSuccessful ? "Last action succeeded" : "Last action failed")}
+                label={statusLabel ?? (wasSuccessful ? L("Last action succeeded", "上次操作成功") : L("Last action failed", "上次操作失敗"))}
               >
                 {!wasSuccessful && statusMessage ? statusMessage : null}
               </Field>
